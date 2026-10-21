@@ -1,0 +1,14 @@
+{
+  "name": "simpleapps2",
+  "version": "1.0.0",
+  "description": "A simple Hello World app",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
