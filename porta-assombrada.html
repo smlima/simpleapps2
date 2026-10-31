@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Porta Assombrada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Creepster&family=Rubik:wght@400;600&display=swap">
+<style>
+/* Layout: um único ecrã, porta ao centro, botão grande por baixo */
+:root{
+  --bg:#120d16; --panel:#1e1624; --wood:#5a3a22; --wood-dark:#3a2414;
+  --fg:#efe6d8; --muted:#a4949c; --pumpkin:#ff7a1a; --ghost:#8cf2c8;
+  --display:'Creepster',Impact,fantasy; --body:'Rubik',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 20%,#2a1a33 0%,var(--bg) 70%);color:var(--fg);font-family:var(--body);
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2.4rem,11vw,3.6rem);margin:0;color:var(--pumpkin);letter-spacing:.04em;text-shadow:0 0 18px rgba(255,122,26,.45)}
+.frame{width:150px;height:230px;background:#000;border:8px solid var(--wood-dark);border-bottom:none;border-radius:6px 6px 0 0;perspective:500px;box-shadow:0 0 40px rgba(140,242,200,.08)}
+.door{width:100%;height:100%;background:repeating-linear-gradient(90deg,var(--wood) 0 22px,var(--wood-dark) 22px 24px);transform-origin:left center;transition:transform .4s ease;position:relative}
+.door::after{content:"";position:absolute;right:14px;top:50%;width:12px;height:12px;border-radius:50%;background:#c9a24a}
+.door.open{transform:rotateY(-55deg);transition:transform 1.4s cubic-bezier(.3,.1,.2,1)}
+.frame.armed{box-shadow:0 0 50px rgba(140,242,200,.35)}
+#toggle{font-family:var(--body);font-weight:600;font-size:1.25rem;width:min(320px,100%);padding:20px;border-radius:999px;border:3px solid var(--pumpkin);background:transparent;color:var(--pumpkin);cursor:pointer}
+#toggle.on{background:var(--pumpkin);color:var(--bg)}
+#toggle:focus-visible,button:focus-visible{outline:3px solid var(--ghost);outline-offset:3px}
+.status{color:var(--muted);min-height:2.6em;max-width:32ch;line-height:1.35}
+.status b{color:var(--ghost)}
+.controls{display:flex;flex-direction:column;gap:12px;width:min(320px,100%)}
+label{font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between}
+input[type=range]{width:100%;accent-color:var(--pumpkin)}
+.small{background:var(--panel);color:var(--fg);border:1px solid #3a2e40;border-radius:10px;padding:12px;font:inherit;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.door,.door.open{transition:none}}
+</style>
+</head>
+<body>
+<h1>Porta Assombrada</h1>
+<div class="frame" id="frame"><div class="door" id="door"></div></div>
+<button id="toggle" type="button">Ativar</button>
+<p class="status" id="status">Carrega em <b>Ativar</b>, pousa o telemóvel e espera que alguém lhe mexa…</p>
+<div class="controls">
+  <label for="sens"><span>Sensibilidade</span><span id="sensVal">Média</span></label>
+  <input id="sens" type="range" min="1" max="5" value="3">
+  <button class="small" id="test" type="button">Testar o som</button>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let armed=false, lastPlay=0, wakeLock=null, prev=null;
+const COOLDOWN=2600;
+const thresholds={1:6,2:4,3:2.6,4:1.6,5:0.9};
+const names={1:'Muito baixa',2:'Baixa',3:'Média',4:'Alta',5:'Muito alta'};
+
+// Gera um rangido de porta: "stick-slip" (cliques irregulares) a excitar ressonâncias da madeira
+function makeCreak(ac){
+  const sr=ac.sampleRate, dur=2.2, n=Math.floor(sr*dur);
+  const b=ac.createBuffer(1,n,sr), d=b.getChannelData(0);
+  let phase=0, t=0;
+  const seed=Math.random()*10;
+  while(t<n){
+    const x=t/n;
+    // frequência dos cliques sobe e desce como uma dobradiça a ser forçada
+    let f=40+90*Math.sin(Math.PI*x)+35*Math.sin(x*17+seed)+20*Math.sin(x*41+seed*2);
+    f=Math.max(18,f*(0.85+Math.random()*0.3));
+    const amp=Math.sin(Math.PI*Math.min(1,x*1.15))*(0.6+0.4*Math.random());
+    const len=Math.floor(sr*0.004);
+    for(let i=0;i<len&&t+i<n;i++){
+      d[t+i]+=amp*(Math.random()*2-1)*Math.exp(-i/(len*0.25));
+    }
+    t+=Math.floor(sr/f);
+  }
+  return b;
+}
+
+// Pré-gera vários rangidos como ficheiros WAV e toca-os num <audio>,
+// que funciona mesmo com o iPhone em modo silencioso e fora de um toque no ecrã.
+const creakUrls=[]; let creakIdx=0;
+const player=new Audio(); player.preload='auto'; player.setAttribute('playsinline','');
+try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+
+function toWav(buf){
+  const d=buf.getChannelData(0), sr=buf.sampleRate, n=d.length;
+  let peak=0; for(let i=0;i<n;i++) peak=Math.max(peak,Math.abs(d[i]));
+  const k=peak>0?0.95/peak:1;
+  const ab=new ArrayBuffer(44+n*2), v=new DataView(ab);
+  const s=(o,str)=>{for(let i=0;i<str.length;i++) v.setUint8(o+i,str.charCodeAt(i));};
+  s(0,'RIFF'); v.setUint32(4,36+n*2,true); s(8,'WAVE'); s(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  s(36,'data'); v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){ const x=Math.max(-1,Math.min(1,d[i]*k)); v.setInt16(44+i*2,x*32767,true); }
+  return URL.createObjectURL(new Blob([ab],{type:'audio/wav'}));
+}
+
+async function renderCreak(){
+  const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  const sr=22050, oc=new OAC(1,Math.floor(sr*2.6),sr);
+  const src=oc.createBufferSource(); src.buffer=makeCreak(oc);
+  src.playbackRate.value=0.85+Math.random()*0.3;
+  const out=oc.createGain(); out.gain.value=1;
+  [[380,9,1],[820,12,0.8],[1650,14,0.6],[2900,10,0.3]].forEach(([fr,q,g])=>{
+    const bp=oc.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=fr*(0.9+Math.random()*0.2); bp.Q.value=q;
+    const gn=oc.createGain(); gn.gain.value=g;
+    src.connect(bp); bp.connect(gn); gn.connect(out);
+  });
+  out.connect(oc.destination); src.start();
+  return toWav(await oc.startRendering());
+}
+
+(async()=>{ try{ for(let i=0;i<4;i++) creakUrls.push(await renderCreak()); player.src=creakUrls[0]; }catch(e){ $('status').textContent='Não foi possível criar o som neste browser.'; } })();
+
+// Tem de ser chamado dentro de um toque: desbloqueia o áudio para mais tarde
+function unlockAudio(){
+  if(!player.src) return;
+  player.muted=true;
+  const p=player.play();
+  if(p) p.then(()=>{ player.pause(); player.currentTime=0; player.muted=false; }).catch(()=>{ player.muted=false; });
+}
+
+function playCreak(){
+  if(!creakUrls.length) return;
+  player.muted=false;
+  player.src=creakUrls[creakIdx++ % creakUrls.length]; // cada rangido é um pouco diferente
+  player.volume=1;
+  const p=player.play(); if(p) p.catch(()=>{ $('status').innerHTML='O browser bloqueou o som. Toca em <b>Testar o som</b> uma vez e volta a tentar.'; });
+  const door=$('door'); door.classList.add('open');
+  setTimeout(()=>door.classList.remove('open'),2200);
+  if(navigator.vibrate) navigator.vibrate(60);
+}
+
+function onMotion(e){
+  if(!armed) return;
+  const a=e.accelerationIncludingGravity||e.acceleration; if(!a||a.x==null) return;
+  if(prev){
+    const delta=Math.abs(a.x-prev.x)+Math.abs(a.y-prev.y)+Math.abs(a.z-prev.z);
+    const now=Date.now();
+    if(delta>thresholds[$('sens').value] && now-lastPlay>COOLDOWN){
+      lastPlay=now; playCreak();
+      $('status').innerHTML='<b>Iiiiiiic…</b> Apanhado!';
+      setTimeout(()=>{ if(armed) setArmedText(); },2500);
+    }
+  }
+  gotMotion=true;
+  prev={x:a.x,y:a.y,z:a.z};
+}
+
+function setArmedText(){ $('status').innerHTML='<b>Ativo.</b> Ao mínimo movimento, a porta range.'; }
+
+let gotMotion=false;
+async function arm(){
+  unlockAudio();
+  if(typeof DeviceMotionEvent==='undefined'){
+    $('status').textContent='Este dispositivo não tem sensor de movimento.'; return;
+  }
+  if(typeof DeviceMotionEvent.requestPermission==='function'){ // iPhone
+    try{ const r=await DeviceMotionEvent.requestPermission(); if(r!=='granted'){ $('status').textContent='Sem permissão para o sensor de movimento.'; return; } }
+    catch(err){ $('status').textContent='Não foi possível pedir acesso ao sensor.'; return; }
+  }
+  window.addEventListener('devicemotion',onMotion);
+  try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
+  prev=null; armed=true; lastPlay=Date.now(); // pequena pausa para pousares o telemóvel
+  $('toggle').textContent='Desativar'; $('toggle').classList.add('on'); $('frame').classList.add('armed');
+  setArmedText();
+  gotMotion=false;
+  setTimeout(()=>{ if(armed&&!gotMotion) $('status').innerHTML='O sensor de movimento não está a responder nesta página. Abre a app a partir de um site com <b>https</b> (por exemplo GitHub Pages).'; },3000);
+}
+
+function disarm(){
+  armed=false; window.removeEventListener('devicemotion',onMotion);
+  try{ wakeLock?.release(); }catch(e){} wakeLock=null;
+  $('toggle').textContent='Ativar'; $('toggle').classList.remove('on'); $('frame').classList.remove('armed');
+  $('status').innerHTML='Desativado. Carrega em <b>Ativar</b> para voltar a assombrar.';
+}
+
+$('toggle').addEventListener('click',()=>armed?disarm():arm());
+$('test').addEventListener('click',playCreak);
+$('sens').addEventListener('input',e=>$('sensVal').textContent=names[e.target.value]);
+document.addEventListener('visibilitychange',async()=>{ if(armed&&document.visibilityState==='visible'){ try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){} } });
+</script>
+</body>
+</html>
