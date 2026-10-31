@@ -34,6 +34,10 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(2.4rem,11vw,3.6rem
 label{font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between}
 input[type=range]{width:100%;accent-color:var(--pumpkin)}
 .small{background:var(--panel);color:var(--fg);border:1px solid #3a2e40;border-radius:10px;padding:12px;font:inherit;cursor:pointer}
+.meter{position:relative;height:10px;border-radius:99px;background:var(--panel);border:1px solid #3a2e40;overflow:hidden}
+.meter span{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--ghost),var(--pumpkin));transition:width .1s linear}
+.meter i{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--fg);opacity:.7}
+.hint{font-size:.75rem;color:var(--muted);margin:-4px 0 0;text-align:left}
 @media (prefers-reduced-motion:reduce){.door,.door.open{transition:none}}
 </style>
 </head>
@@ -41,51 +45,70 @@ input[type=range]{width:100%;accent-color:var(--pumpkin)}
 <h1>Porta Assombrada</h1>
 <div class="frame" id="frame"><div class="door" id="door"></div></div>
 <button id="toggle" type="button">Ativar</button>
-<p class="status" id="status">Carrega em <b>Ativar</b>, pousa o telemóvel e espera que alguém lhe mexa…</p>
+<p class="status" id="status">Carrega em <b>Ativar</b>, e quando o telemóvel rodar, a porta range…</p>
 <div class="controls">
   <label for="sens"><span>Sensibilidade</span><span id="sensVal">Média</span></label>
   <input id="sens" type="range" min="1" max="5" value="3">
+  <div class="meter" aria-hidden="true"><span id="bar"></span><i></i></div>
+  <p class="hint">A barra mostra o movimento. Quando passa a linha branca, a porta range.</p>
   <button class="small" id="test" type="button">Testar o som</button>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
-let armed=false, lastPlay=0, wakeLock=null, prev=null;
-const COOLDOWN=2600;
-const thresholds={1:6,2:4,3:2.6,4:1.6,5:0.9};
+let armed=false, armedAt=0, wakeLock=null, gotMotion=false;
+let level=0, playing=false, prevAcc=null;
 const names={1:'Muito baixa',2:'Baixa',3:'Média',4:'Alta',5:'Muito alta'};
+// limiares: rotação em graus/segundo (giroscópio) e variação de aceleração (reserva)
+const rotThr={1:140,2:90,3:55,4:32,5:16};
+const accThr={1:6,2:4,3:2.6,4:1.6,5:0.9};
+const sens=()=>$('sens').value;
 
-// Gera um rangido de porta: "stick-slip" (cliques irregulares) a excitar ressonâncias da madeira
-function makeCreak(ac){
-  const sr=ac.sampleRate, dur=2.2, n=Math.floor(sr*dur);
-  const b=ac.createBuffer(1,n,sr), d=b.getChannelData(0);
-  let phase=0, t=0;
-  const seed=Math.random()*10;
+// ruído suave (pontos aleatórios com interpolação) para variar tom e intensidade
+function smoothNoise(points){
+  const p=Array.from({length:points+1},()=>Math.random());
+  return x=>{ const t=Math.min(.9999,Math.max(0,x))*points, i=Math.floor(t), f=(1-Math.cos((t-i)*Math.PI))/2; return p[i]*(1-f)+p[i+1]*f; };
+}
+
+// Rangido de dobradiça: atrito "agarra-solta" a centenas de vezes por segundo cria um chiar com tom
+function makeCreak(sr,dur){
+  const n=Math.floor(sr*dur), d=new Float32Array(n);
+  const pitch=smoothNoise(10), wob=smoothNoise(35), env=smoothNoise(14), gaps=smoothNoise(22);
+  const base=150+Math.random()*120, span=220+Math.random()*260;
+  let t=0;
   while(t<n){
     const x=t/n;
-    // frequência dos cliques sobe e desce como uma dobradiça a ser forçada
-    let f=40+90*Math.sin(Math.PI*x)+35*Math.sin(x*17+seed)+20*Math.sin(x*41+seed*2);
-    f=Math.max(18,f*(0.85+Math.random()*0.3));
-    const amp=Math.sin(Math.PI*Math.min(1,x*1.15))*(0.6+0.4*Math.random());
-    const len=Math.floor(sr*0.004);
+    const ramp=Math.min(1,x*3.5);                    // começa num "trrrr" grave e sobe para o chiar
+    let f=40+(base-40)*ramp+span*ramp*pitch(x)+40*(wob(x)-.5);
+    f*=0.96+0.08*Math.random();                      // irregularidade do atrito
+    let a=Math.pow(Math.sin(Math.PI*Math.min(1,x*1.08)),0.5)*(0.35+0.65*env(x));
+    if(gaps(x)<0.2) a*=0.12;                         // pequenas falhas no rangido
+    a*=0.75+0.5*Math.random();
+    const len=Math.floor(sr*0.003);
     for(let i=0;i<len&&t+i<n;i++){
-      d[t+i]+=amp*(Math.random()*2-1)*Math.exp(-i/(len*0.25));
+      d[t+i]+=a*(Math.exp(-i/(sr*0.00025))+0.35*(Math.random()*2-1)*Math.exp(-i/(sr*0.0012)));
     }
-    t+=Math.floor(sr/f);
+    t+=Math.max(1,Math.round(sr/f));
   }
+  return d;
+}
+
+// eco de casa velha: resposta de sala gerada com ruído a decair
+function makeRoom(oc,secs){
+  const sr=oc.sampleRate, n=Math.floor(sr*secs), b=oc.createBuffer(1,n,sr), d=b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);
   return b;
 }
 
-// Pré-gera vários rangidos como ficheiros WAV e toca-os num <audio>,
-// que funciona mesmo com o iPhone em modo silencioso e fora de um toque no ecrã.
 const creakUrls=[]; let creakIdx=0;
 const player=new Audio(); player.preload='auto'; player.setAttribute('playsinline','');
+player.preservesPitch=false; player.mozPreservesPitch=false; player.webkitPreservesPitch=false;
 try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
 
 function toWav(buf){
   const d=buf.getChannelData(0), sr=buf.sampleRate, n=d.length;
   let peak=0; for(let i=0;i<n;i++) peak=Math.max(peak,Math.abs(d[i]));
-  const k=peak>0?0.95/peak:1;
+  const k=peak>0?0.97/peak:1;
   const ab=new ArrayBuffer(44+n*2), v=new DataView(ab);
   const s=(o,str)=>{for(let i=0;i<str.length;i++) v.setUint8(o+i,str.charCodeAt(i));};
   s(0,'RIFF'); v.setUint32(4,36+n*2,true); s(8,'WAVE'); s(12,'fmt ');
@@ -98,20 +121,28 @@ function toWav(buf){
 
 async function renderCreak(){
   const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
-  const sr=22050, oc=new OAC(1,Math.floor(sr*2.6),sr);
-  const src=oc.createBufferSource(); src.buffer=makeCreak(oc);
-  src.playbackRate.value=0.85+Math.random()*0.3;
-  const out=oc.createGain(); out.gain.value=1;
-  [[380,9,1],[820,12,0.8],[1650,14,0.6],[2900,10,0.3]].forEach(([fr,q,g])=>{
-    const bp=oc.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=fr*(0.9+Math.random()*0.2); bp.Q.value=q;
+  const sr=44100, dur=2.4, oc=new OAC(1,Math.floor(sr*(dur+0.9)),sr);
+  const data=makeCreak(sr,dur), buf=oc.createBuffer(1,data.length,sr);
+  buf.getChannelData(0).set(data);
+  const src=oc.createBufferSource(); src.buffer=buf;
+  const hp=oc.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=140;
+  const mix=oc.createGain(); mix.gain.value=1;
+  // ressonâncias da madeira e da dobradiça de metal
+  [[620,7,1],[1250,9,0.9],[2300,11,0.7],[3700,12,0.45],[5200,10,0.2]].forEach(([fr,q,g])=>{
+    const bp=oc.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=fr*(0.88+Math.random()*0.24); bp.Q.value=q;
     const gn=oc.createGain(); gn.gain.value=g;
-    src.connect(bp); bp.connect(gn); gn.connect(out);
+    hp.connect(bp); bp.connect(gn); gn.connect(mix);
   });
-  out.connect(oc.destination); src.start();
+  const dry=oc.createGain(); dry.gain.value=0.15; hp.connect(dry); dry.connect(mix);
+  src.connect(hp);
+  const room=oc.createConvolver(); room.buffer=makeRoom(oc,0.9);
+  const wet=oc.createGain(); wet.gain.value=0.22;
+  mix.connect(oc.destination); mix.connect(room); room.connect(wet); wet.connect(oc.destination);
+  src.start();
   return toWav(await oc.startRendering());
 }
 
-(async()=>{ try{ for(let i=0;i<4;i++) creakUrls.push(await renderCreak()); player.src=creakUrls[0]; }catch(e){ $('status').textContent='Não foi possível criar o som neste browser.'; } })();
+(async()=>{ try{ for(let i=0;i<6;i++) creakUrls.push(await renderCreak()); player.src=creakUrls[0]; }catch(e){ $('status').textContent='Não foi possível criar o som neste browser.'; } })();
 
 // Tem de ser chamado dentro de um toque: desbloqueia o áudio para mais tarde
 function unlockAudio(){
@@ -121,36 +152,51 @@ function unlockAudio(){
   if(p) p.then(()=>{ player.pause(); player.currentTime=0; player.muted=false; }).catch(()=>{ player.muted=false; });
 }
 
-function playCreak(){
-  if(!creakUrls.length) return;
+function nextClip(){
   player.muted=false;
   player.src=creakUrls[creakIdx++ % creakUrls.length]; // cada rangido é um pouco diferente
-  player.volume=1;
-  const p=player.play(); if(p) p.catch(()=>{ $('status').innerHTML='O browser bloqueou o som. Toca em <b>Testar o som</b> uma vez e volta a tentar.'; });
-  const door=$('door'); door.classList.add('open');
-  setTimeout(()=>door.classList.remove('open'),2200);
-  if(navigator.vibrate) navigator.vibrate(60);
+  player.playbackRate=rateFor(level);
+  const p=player.play(); if(p) p.catch(()=>{ playing=false; $('status').innerHTML='O browser bloqueou o som. Toca em <b>Testar o som</b> uma vez e volta a tentar.'; });
 }
+const rateFor=l=>Math.min(1.35,Math.max(0.85,0.85+(l-1)*0.2));
+
+function startCreak(){
+  if(playing||!creakUrls.length) return;
+  playing=true; nextClip();
+  $('door').classList.add('open');
+  if(navigator.vibrate) navigator.vibrate(60);
+  if(armed) $('status').innerHTML='<b>Iiiiiiiic…</b> Apanhado!';
+}
+
+// quando um rangido acaba: se o telemóvel ainda está a rodar, continua a ranger
+player.addEventListener('ended',()=>{
+  if(armed&&level>0.6){ nextClip(); return; }
+  playing=false; $('door').classList.remove('open');
+  if(armed) setTimeout(()=>{ if(armed&&!playing) setArmedText(); },800);
+});
 
 function onMotion(e){
-  if(!armed) return;
-  const a=e.accelerationIncludingGravity||e.acceleration; if(!a||a.x==null) return;
-  if(prev){
-    const delta=Math.abs(a.x-prev.x)+Math.abs(a.y-prev.y)+Math.abs(a.z-prev.z);
-    const now=Date.now();
-    if(delta>thresholds[$('sens').value] && now-lastPlay>COOLDOWN){
-      lastPlay=now; playCreak();
-      $('status').innerHTML='<b>Iiiiiiic…</b> Apanhado!';
-      setTimeout(()=>{ if(armed) setArmedText(); },2500);
-    }
-  }
   gotMotion=true;
-  prev={x:a.x,y:a.y,z:a.z};
+  if(!armed) return;
+  let score=0;
+  const r=e.rotationRate;
+  if(r&&(r.alpha!=null||r.beta!=null||r.gamma!=null)){
+    score=Math.hypot(r.alpha||0,r.beta||0,r.gamma||0)/rotThr[sens()];
+  }
+  const a=e.accelerationIncludingGravity||e.acceleration;
+  if(a&&a.x!=null){
+    if(prevAcc) score=Math.max(score,(Math.abs(a.x-prevAcc.x)+Math.abs(a.y-prevAcc.y)+Math.abs(a.z-prevAcc.z))/accThr[sens()]);
+    prevAcc={x:a.x,y:a.y,z:a.z};
+  }
+  level=level*0.75+score*0.25;
+  $('bar').style.width=Math.min(100,level*50)+'%';
+  if(Date.now()<armedAt) return;          // tempo para pousares o telemóvel
+  if(level>1) startCreak();
+  if(playing) player.playbackRate=rateFor(level); // roda mais depressa, range mais agudo
 }
 
-function setArmedText(){ $('status').innerHTML='<b>Ativo.</b> Ao mínimo movimento, a porta range.'; }
+function setArmedText(){ $('status').innerHTML='<b>Ativo.</b> Quando o telemóvel rodar, a porta range.'; }
 
-let gotMotion=false;
 async function arm(){
   unlockAudio();
   if(typeof DeviceMotionEvent==='undefined'){
@@ -162,7 +208,7 @@ async function arm(){
   }
   window.addEventListener('devicemotion',onMotion);
   try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
-  prev=null; armed=true; lastPlay=Date.now(); // pequena pausa para pousares o telemóvel
+  prevAcc=null; level=0; armed=true; armedAt=Date.now()+2500;
   $('toggle').textContent='Desativar'; $('toggle').classList.add('on'); $('frame').classList.add('armed');
   setArmedText();
   gotMotion=false;
@@ -172,12 +218,13 @@ async function arm(){
 function disarm(){
   armed=false; window.removeEventListener('devicemotion',onMotion);
   try{ wakeLock?.release(); }catch(e){} wakeLock=null;
+  level=0; $('bar').style.width='0';
   $('toggle').textContent='Ativar'; $('toggle').classList.remove('on'); $('frame').classList.remove('armed');
   $('status').innerHTML='Desativado. Carrega em <b>Ativar</b> para voltar a assombrar.';
 }
 
 $('toggle').addEventListener('click',()=>armed?disarm():arm());
-$('test').addEventListener('click',playCreak);
+$('test').addEventListener('click',()=>{ if(!playing){ level=1.5; startCreak(); level=0; } });
 $('sens').addEventListener('input',e=>$('sensVal').textContent=names[e.target.value]);
 document.addEventListener('visibilitychange',async()=>{ if(armed&&document.visibilityState==='visible'){ try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){} } });
 </script>
