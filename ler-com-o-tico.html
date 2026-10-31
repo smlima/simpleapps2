@@ -1,0 +1,300 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ler com o Tico</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Grandstander:wght@700;800&display=swap">
+<style>
+/* Layout: um cartão de leitura grande ao centro, com dois jogos (ordenar a frase / escolher a figura). Tema único, claro, tipo caderno escolar. */
+:root{
+  --papel:#FFF8E8; --tinta:#2B2A4C; --linha:#C9DDF2; --acento:#F26B3A; --verde:#3FA36B; --azul:#3D7DD8; --suave:#F3E6C8;
+  --f-texto:"Andika","Comic Sans MS",system-ui,sans-serif;
+  --f-titulo:"Grandstander","Andika",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--papel);color:var(--tinta);font-family:var(--f-texto);
+  background-image:repeating-linear-gradient(to bottom,transparent 0 38px,var(--linha) 38px 40px);}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:16px 32px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-titulo);font-size:clamp(1.6rem,6vw,2.3rem);margin:0;color:var(--acento);letter-spacing:.01em}
+.estrelas{font-family:var(--f-titulo);font-size:1.2rem;background:#fff;border:3px solid var(--tinta);border-radius:999px;padding:4px 14px;display:flex;align-items:center;gap:6px}
+.estrelas svg{width:24px;height:24px}
+.modos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modo{font-family:var(--f-titulo);font-size:1.05rem;border:3px solid var(--tinta);border-radius:14px;padding:10px;background:#fff;color:var(--tinta);cursor:pointer}
+.modo[aria-pressed="true"]{background:var(--acento);color:#fff;box-shadow:3px 3px 0 var(--tinta)}
+.cartao{background:#fff;border:3px solid var(--tinta);border-radius:22px;box-shadow:6px 6px 0 var(--tinta);padding:18px;display:flex;flex-direction:column;gap:16px}
+.topo{display:flex;align-items:center;gap:12px}
+.tico{width:72px;height:72px;flex:none;transition:transform .3s}
+.tico.feliz{transform:translateY(-8px) rotate(-6deg)}
+.balao{background:var(--suave);border-radius:16px;padding:10px 14px;font-size:1.05rem;position:relative;min-width:0}
+.balao::before{content:"";position:absolute;left:-10px;top:50%;margin-top:-8px;border:8px solid transparent;border-right-color:var(--suave);border-left:0}
+.acoes{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+button.btn{font-family:var(--f-titulo);font-size:1.1rem;border:3px solid var(--tinta);border-radius:14px;padding:10px 18px;cursor:pointer;background:var(--azul);color:#fff;box-shadow:3px 3px 0 var(--tinta)}
+button.btn.sec{background:#fff;color:var(--tinta)}
+button.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--tinta)}
+button:focus-visible{outline:3px solid var(--acento);outline-offset:3px}
+.pergunta{text-align:center;font-family:var(--f-titulo);font-size:1.15rem;margin:0}
+
+/* Escolher figura */
+.frase{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:clamp(2rem,9vw,3.2rem);line-height:1.25;padding-block:6px}
+.palavra{background:none;border:0;font:inherit;color:inherit;padding:2px 6px;border-radius:12px;cursor:pointer;border-bottom:4px dotted transparent}
+.palavra:hover,.palavra:focus-visible{border-bottom-color:var(--azul);outline:none}
+.a-ler{background:#FFE39A!important}
+.silabas{font-size:.45em;display:block;color:var(--azul);letter-spacing:.06em;min-height:1.2em}
+.figuras{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.fig{background:var(--papel);border:3px solid var(--tinta);border-radius:18px;padding:8px;cursor:pointer;aspect-ratio:1;max-width:100%;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.fig svg{width:100%;height:100%}
+.fig:hover{transform:scale(1.03)}
+.fig.certa{background:#D6F2DF;border-color:var(--verde)}
+.errada{background:#FBE0D6!important;animation:abana .35s}
+@keyframes abana{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Ordenar */
+.cena{width:min(260px,70%);aspect-ratio:1;margin:0 auto;background:var(--papel);border:3px solid var(--tinta);border-radius:22px;padding:10px;max-width:100%}
+.cena svg{width:100%;height:100%;display:block}
+.linhaFrase{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:70px;padding:10px;border-bottom:4px solid var(--linha)}
+.vazio{width:70px;height:56px;border:3px dashed #B9B2A0;border-radius:12px}
+.peca{font-family:var(--f-texto);font-size:clamp(1.6rem,7vw,2.3rem);font-weight:700;background:#FFE39A;color:var(--tinta);border:3px solid var(--tinta);border-radius:12px;padding:4px 14px;cursor:pointer;box-shadow:3px 3px 0 var(--tinta);min-height:56px}
+.peca.posta{background:#fff}
+.peca.certa{background:#D6F2DF;border-color:var(--verde)}
+.peca.usada{visibility:hidden}
+.banco{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;min-height:62px}
+
+.seguinte{display:flex;justify-content:center}
+.dica{font-size:.95rem;text-align:center;opacity:.8;margin:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Ler com o Tico</h1>
+    <div class="estrelas" aria-label="Estrelas ganhas"><svg viewBox="0 0 24 24"><path fill="#FFC531" stroke="#2B2A4C" stroke-width="1.5" d="M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.5 5.7 21l1.5-7L2 9.3l7-.8z"/></svg><span id="nEstrelas">0</span></div>
+  </header>
+
+  <div class="modos" role="group" aria-label="Escolher jogo">
+    <button class="modo" id="mOrdenar" aria-pressed="true">Ordena a frase</button>
+    <button class="modo" id="mFigura" aria-pressed="false">Escolhe a figura</button>
+  </div>
+
+  <main class="cartao">
+    <div class="topo">
+      <svg class="tico" id="tico" viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <div class="balao" id="balao"></div>
+    </div>
+
+    <!-- Jogo 1: ordenar -->
+    <section id="jOrdenar" style="display:flex;flex-direction:column;gap:16px">
+      <div class="cena" id="cena" role="img" aria-label="Imagem da ação"></div>
+      <div class="linhaFrase" id="linhaFrase"></div>
+      <div class="banco" id="banco"></div>
+      <div class="acoes">
+        <button class="btn sec" id="apagar">↩ Recomeçar</button>
+        <button class="btn sec" id="ajuda">🔊 Ajuda</button>
+      </div>
+    </section>
+
+    <!-- Jogo 2: escolher figura -->
+    <section id="jFigura" hidden style="flex-direction:column;gap:16px">
+      <div class="frase" id="frase" aria-live="polite"></div>
+      <div class="acoes">
+        <button class="btn" id="ouvir">🔊 Ouvir a frase</button>
+        <button class="btn sec" id="silabasBtn">Mostrar sílabas</button>
+      </div>
+      <p class="pergunta">Qual é a figura certa?</p>
+      <div class="figuras" id="figuras"></div>
+    </section>
+
+    <div class="seguinte"><button class="btn" id="seguinte" hidden>Próxima →</button></div>
+  </main>
+  <p class="dica" id="dica"></p>
+</div>
+
+<script>
+const S = 'stroke="#2B2A4C" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+/* Tico: mascote original (passarinho verde). Desenhado num grupo para poder ser reutilizado nas cenas. */
+const TICO_CORPO = `
+  <circle cx="50" cy="56" r="34" fill="#8FD16A" ${S}/>
+  <ellipse cx="50" cy="66" rx="20" ry="16" fill="#D9F2C0"/>
+  <path d="M44 22 q4 -14 10 -2 q6 -10 8 4" fill="#F26B3A" ${S}/>
+  <circle cx="40" cy="46" r="8" fill="#fff" stroke="#2B2A4C" stroke-width="2.5"/>
+  <circle cx="60" cy="46" r="8" fill="#fff" stroke="#2B2A4C" stroke-width="2.5"/>
+  <circle cx="41" cy="47" r="3.5" fill="#2B2A4C"/><circle cx="61" cy="47" r="3.5" fill="#2B2A4C"/>
+  <path d="M44 56 l6 9 l6 -9z" fill="#FFB020" ${S}/>`;
+const ASAS_BAIXO = `<path d="M20 54 q-12 6 -6 18 q8 -2 12 -10z" fill="#6DB64A" ${S}/><path d="M80 54 q12 6 6 18 q-8 -2 -12 -10z" fill="#6DB64A" ${S}/>`;
+const PES = `<path d="M38 89 l0 6 M62 89 l0 6" stroke="#F26B3A" stroke-width="4" stroke-linecap="round"/>`;
+document.getElementById('tico').innerHTML = `<ellipse cx="50" cy="94" rx="26" ry="4" fill="#E9DCBC"/>${PES}${ASAS_BAIXO}${TICO_CORPO}`;
+const ticoEm = (x,y,s,extra='',asas=ASAS_BAIXO)=>`<g transform="translate(${x} ${y}) scale(${s})">${asas}${extra}${TICO_CORPO}</g>`;
+
+const MACA = `<path d="M50 32 q-26 -14 -32 14 q-4 30 22 40 q10 4 20 0 q26 -10 22 -40 q-6 -28 -32 -14z" fill="#E8463A" ${S}/><path d="M50 32 q0 -12 6 -18" fill="none" ${S}/><path d="M54 22 q14 -10 22 0 q-12 8 -22 0z" fill="#3FA36B" ${S}/>`;
+
+const FIG = {
+  sol:`<svg viewBox="0 0 100 100"><g ${S}>${[0,45,90,135,180,225,270,315].map(a=>`<line x1="50" y1="12" x2="50" y2="22" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="22" fill="#FFC531"/></g><circle cx="43" cy="47" r="2.5" fill="#2B2A4C"/><circle cx="57" cy="47" r="2.5" fill="#2B2A4C"/><path d="M42 56 q8 7 16 0" fill="none" ${S}/></svg>`,
+  lua:`<svg viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="14" fill="#2B3A6B"/><path d="M60 20 a32 32 0 1 0 14 52 a26 26 0 1 1 -14 -52z" fill="#FFE38A" ${S}/><circle cx="24" cy="24" r="2.5" fill="#fff"/><circle cx="80" cy="30" r="2" fill="#fff"/><circle cx="74" cy="82" r="2.5" fill="#fff"/></svg>`,
+  bola:`<svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="32" fill="#3D7DD8" ${S}/><path d="M22 40 q28 14 56 0 M22 64 q28 -14 56 0" fill="none" stroke="#fff" stroke-width="5"/><circle cx="50" cy="52" r="32" fill="none" ${S}/><ellipse cx="50" cy="90" rx="22" ry="3" fill="#E9DCBC"/></svg>`,
+  maca:`<svg viewBox="0 0 100 100">${MACA}<ellipse cx="36" cy="48" rx="4" ry="8" fill="#fff" opacity=".6"/></svg>`,
+  peixe:`<svg viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="14" fill="#BFE3F7"/><path d="M8 78 q10 -6 20 0 t20 0 t20 0 t20 0" fill="none" stroke="#3D7DD8" stroke-width="3"/><path d="M22 50 q20 -24 46 0 q-26 24 -46 0z" fill="#F7A23A" ${S}/><path d="M68 50 l16 -12 l0 24z" fill="#F7A23A" ${S}/><circle cx="34" cy="47" r="3" fill="#2B2A4C"/><circle cx="20" cy="30" r="3" fill="none" stroke="#3D7DD8" stroke-width="2"/><circle cx="26" cy="22" r="2" fill="none" stroke="#3D7DD8" stroke-width="2"/></svg>`,
+  gato:`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="70" rx="34" ry="16" fill="#A9A3B8" ${S}/><path d="M80 72 q14 -4 8 -18" fill="none" stroke="#2B2A4C" stroke-width="5" stroke-linecap="round"/><circle cx="34" cy="58" r="16" fill="#A9A3B8" ${S}/><path d="M22 48 l-2 -14 l12 8z M40 42 l8 -10 l2 14z" fill="#A9A3B8" ${S}/><path d="M26 58 q4 3 8 0 M36 58 q4 3 8 0" fill="none" ${S}/><text x="58" y="34" font-family="Grandstander,sans-serif" font-size="14" fill="#3D7DD8">z z</text></svg>`,
+  casa:`<svg viewBox="0 0 100 100"><rect x="22" y="44" width="56" height="44" fill="#FFE3B0" ${S}/><path d="M14 46 l36 -30 l36 30z" fill="#E8463A" ${S}/><rect x="42" y="62" width="16" height="26" fill="#8A5A3B" ${S}/><circle cx="54" cy="76" r="1.8" fill="#FFC531"/><rect x="28" y="52" width="10" height="10" fill="#BFE3F7" ${S}/><rect x="62" y="52" width="10" height="10" fill="#BFE3F7" ${S}/></svg>`,
+  carro:`<svg viewBox="0 0 100 100"><path d="M14 50 l6 -16 l40 0 l10 16" fill="#BFE3F7" ${S}/><rect x="8" y="50" width="84" height="22" rx="8" fill="#E8463A" ${S}/><line x1="40" y1="34" x2="40" y2="50" ${S}/><circle cx="28" cy="74" r="9" fill="#2B2A4C"/><circle cx="72" cy="74" r="9" fill="#2B2A4C"/><circle cx="28" cy="74" r="3" fill="#ccc"/><circle cx="72" cy="74" r="3" fill="#ccc"/><path d="M0 56 h6 M0 62 h4 M0 68 h6" stroke="#2B2A4C" stroke-width="2"/></svg>`,
+  arvore:`<svg viewBox="0 0 100 100"><rect x="44" y="56" width="12" height="36" fill="#8A5A3B" ${S}/><circle cx="50" cy="32" r="22" fill="#3FA36B" ${S}/><circle cx="32" cy="48" r="16" fill="#3FA36B" ${S}/><circle cx="68" cy="48" r="16" fill="#3FA36B" ${S}/><circle cx="42" cy="28" r="3" fill="#E8463A"/><circle cx="62" cy="44" r="3" fill="#E8463A"/></svg>`,
+  flor:`<svg viewBox="0 0 100 100"><path d="M50 52 q2 20 0 40" fill="none" stroke="#3FA36B" stroke-width="5"/><path d="M50 78 q-16 -10 -22 2 q12 6 22 -2z" fill="#3FA36B" ${S}/><g ${S} fill="#F49AC1">${[0,72,144,216,288].map(a=>`<ellipse cx="50" cy="22" rx="10" ry="14" transform="rotate(${a} 50 38)"/>`).join('')}</g><circle cx="50" cy="38" r="9" fill="#FFC531" ${S}/></svg>`,
+  chuva:`<svg viewBox="0 0 100 100"><path d="M24 56 a14 14 0 0 1 4 -27 a18 18 0 0 1 34 -4 a16 16 0 0 1 14 31z" fill="#C9D3E3" ${S}/>${[[30,66],[48,72],[66,66],[38,84],[58,86]].map(([x,y])=>`<path d="M${x} ${y} q-4 6 0 8 q4 -2 0 -8z" fill="#3D7DD8"/>`).join('')}</svg>`,
+  estrela:`<svg viewBox="0 0 100 100"><path d="M50 30 l6 12 l13 2 l-10 9 l3 13 l-12 -7 l-12 7 l3 -13 l-10 -9 l13 -2z" fill="#FFC531" ${S}/><circle cx="20" cy="22" r="2" fill="#2B2A4C" opacity=".3"/><circle cx="82" cy="78" r="2" fill="#2B2A4C" opacity=".3"/></svg>`,
+
+  sapo:`<svg viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" rx="12" fill="#D7EEF8"/><ellipse cx="50" cy="90" rx="46" ry="10" fill="#7FC3E8"/><ellipse cx="22" cy="86" rx="16" ry="5" fill="#3FA36B" ${S}/><path d="M16 74 q-6 -8 -2 -14 M84 74 q6 -8 2 -14" fill="none" stroke="#3FA36B" stroke-width="4" stroke-linecap="round"/><path d="M34 60 l-14 14 M66 60 l14 14" stroke="#2B2A4C" stroke-width="7" stroke-linecap="round"/><path d="M34 60 l-14 14 M66 60 l14 14" stroke="#7CC85A" stroke-width="3" stroke-linecap="round"/><ellipse cx="50" cy="44" rx="24" ry="18" fill="#7CC85A" ${S}/><ellipse cx="50" cy="50" rx="13" ry="9" fill="#D9F2C0"/><circle cx="38" cy="28" r="8" fill="#7CC85A" ${S}/><circle cx="62" cy="28" r="8" fill="#7CC85A" ${S}/><circle cx="38" cy="28" r="3.5" fill="#2B2A4C"/><circle cx="62" cy="28" r="3.5" fill="#2B2A4C"/><path d="M40 40 q10 6 20 0" fill="none" ${S}/><path d="M26 58 l-6 6 M74 58 l6 6" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"/><path d="M42 72 q8 -6 16 0 M38 80 q12 -6 24 0" fill="none" stroke="#3D7DD8" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+
+  /* Cenas de ação */
+  ticoVoa:`<svg viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" rx="12" fill="#BFE3F7"/><path d="M8 26 q6 -8 14 -2 q8 -6 14 2z" fill="#fff"/><path d="M66 82 q6 -8 14 -2 q8 -6 14 2z" fill="#fff"/>${ticoEm(18,18,.62,'',`<path d="M20 50 q-22 -18 -14 -34 q14 6 18 24z" fill="#6DB64A" ${S}/><path d="M80 50 q22 -18 14 -34 q-14 6 -18 24z" fill="#6DB64A" ${S}/>`)}<path d="M10 74 q8 -4 16 0 M14 82 q8 -4 16 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>`,
+  ticoCome:`<svg viewBox="0 0 100 100"><rect x="0" y="70" width="100" height="30" fill="#CDEBB0"/>${ticoEm(2,16,.72)}<g transform="translate(56 40) scale(.42)">${MACA}<path d="M14 44 q8 -10 0 -20 q-6 10 0 20z" fill="#FFF8E8" ${S}/></g><text x="58" y="30" font-family="Grandstander,sans-serif" font-size="12" fill="#F26B3A">nham!</text></svg>`,
+  ticoBebe:`<svg viewBox="0 0 100 100"><rect x="0" y="74" width="100" height="26" fill="#E9DCBC"/>${ticoEm(4,14,.7)}<path d="M58 50 l26 0 l-4 30 l-18 0z" fill="#BFE3F7" ${S}/><path d="M60 58 l22 0" stroke="#3D7DD8" stroke-width="3"/><path d="M62 50 l-24 -2" stroke="#E8463A" stroke-width="3" stroke-linecap="round"/><path d="M70 40 q-4 6 0 8 q4 -2 0 -8z" fill="#3D7DD8"/></svg>`,
+  cao:`<svg viewBox="0 0 100 100"><rect x="0" y="72" width="100" height="28" fill="#9BD37C"/><path d="M4 40 h14 M2 50 h12 M6 60 h12" stroke="#2B2A4C" stroke-width="3" stroke-linecap="round"/><path d="M30 64 l-10 14 M40 66 l-4 14 M66 66 l10 12 M74 62 l14 8" stroke="#2B2A4C" stroke-width="6" stroke-linecap="round"/><path d="M30 64 l-10 14 M40 66 l-4 14 M66 66 l10 12 M74 62 l14 8" stroke="#C98A4B" stroke-width="3" stroke-linecap="round"/><ellipse cx="52" cy="58" rx="26" ry="13" fill="#C98A4B" ${S}/><path d="M26 54 q-10 -10 -6 -18" fill="none" stroke="#2B2A4C" stroke-width="5" stroke-linecap="round"/><circle cx="80" cy="42" r="13" fill="#C98A4B" ${S}/><path d="M72 32 q-4 16 4 18 q4 -10 -4 -18z" fill="#8A5A3B" ${S}/><circle cx="84" cy="40" r="2.5" fill="#2B2A4C"/><circle cx="93" cy="46" r="3" fill="#2B2A4C"/><path d="M86 52 q4 6 -2 8" fill="#E8463A" ${S}/></svg>`,
+  menina:`<svg viewBox="0 0 100 100"><rect x="0" y="82" width="100" height="18" fill="#E9DCBC"/><path d="M26 46 q24 70 48 0" fill="none" stroke="#F26B3A" stroke-width="3"/><circle cx="50" cy="24" r="12" fill="#F5CBA0" ${S}/><path d="M38 22 q12 -18 24 0 q-6 -4 -12 -2 q-6 -2 -12 2z" fill="#8A5A3B" ${S}/><path d="M38 20 q-8 4 -6 14 M62 20 q8 4 6 14" fill="none" stroke="#8A5A3B" stroke-width="4" stroke-linecap="round"/><circle cx="46" cy="25" r="1.8" fill="#2B2A4C"/><circle cx="54" cy="25" r="1.8" fill="#2B2A4C"/><path d="M46 30 q4 3 8 0" fill="none" stroke="#2B2A4C" stroke-width="2"/><path d="M40 38 l20 0 l6 24 l-32 0z" fill="#F49AC1" ${S}/><path d="M40 42 l-14 4 M60 42 l14 4" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"/><path d="M44 62 l-4 12 M56 62 l4 12" stroke="#2B2A4C" stroke-width="4" stroke-linecap="round"/><ellipse cx="50" cy="90" rx="14" ry="2.5" fill="#C9BB97"/></svg>`
+};
+
+/* Jogo 1: frases de ação para ordenar */
+const ACOES = [
+  ["O Tico voa no céu.","ticoVoa"],
+  ["O Tico come a maçã.","ticoCome"],
+  ["O gato dorme.","gato"],
+  ["O cão corre na relva.","cao"],
+  ["A menina salta à corda.","menina"],
+  ["O Tico bebe água.","ticoBebe"],
+  ["O peixe nada no mar.","peixe"],
+  ["O carro anda depressa.","carro"],
+  ["O sapo salta no lago.","sapo"],
+  ["A lua brilha à noite.","lua"]
+];
+/* Jogo 2: frases para escolher a figura */
+const FRASES = [
+  ["O sol é amarelo.","sol",{amarelo:"a-ma-re-lo"}],
+  ["A bola é azul.","bola",{bola:"bo-la",azul:"a-zul"}],
+  ["A maçã é vermelha.","maca",{"maçã":"ma-çã",vermelha:"ver-me-lha"}],
+  ["O gato dorme.","gato",{gato:"ga-to",dorme:"dor-me"}],
+  ["A casa tem uma porta.","casa",{casa:"ca-sa",uma:"u-ma",porta:"por-ta"}],
+  ["O peixe nada no mar.","peixe",{peixe:"pei-xe",nada:"na-da"}],
+  ["A lua brilha à noite.","lua",{lua:"lu-a",brilha:"bri-lha",noite:"noi-te"}],
+  ["O carro anda depressa.","carro",{carro:"car-ro",anda:"an-da",depressa:"de-pres-sa"}],
+  ["A árvore é alta.","arvore",{"árvore":"ár-vo-re",alta:"al-ta"}],
+  ["A flor é cor de rosa.","flor",{rosa:"ro-sa"}],
+  ["O sapo é verde.","sapo",{sapo:"sa-po",verde:"ver-de"}],
+  ["A estrela é pequena.","estrela",{estrela:"es-tre-la",pequena:"pe-que-na"}]
+];
+const FIG_ESCOLHA=["sol","lua","bola","maca","peixe","gato","casa","carro","arvore","flor","sapo","estrela"];
+const ELOGIOS=["Muito bem!","Boa! Leste tudo!","Fantástico!","És um campeão!","Isso mesmo!"];
+
+const $=id=>document.getElementById(id);
+let modo='ordenar', estrelas=0, tentou=false, verSilabas=false;
+const rondas={ordenar:{lista:ACOES,ordem:[],i:0},figura:{lista:FRASES,ordem:[],i:0}};
+try{estrelas=+localStorage.getItem('tico-estrelas')||0}catch(e){}
+$('nEstrelas').textContent=estrelas;
+
+let voz=null;
+function escolherVoz(){try{const v=speechSynthesis.getVoices();voz=v.find(x=>x.lang==='pt-PT')||v.find(x=>x.lang&&x.lang.startsWith('pt'))||null}catch(e){}}
+try{escolherVoz();speechSynthesis.onvoiceschanged=escolherVoz}catch(e){}
+function falar(t,rate=.8){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='pt-PT';if(voz)u.voice=voz;u.rate=rate;speechSynthesis.speak(u);return u}catch(e){return null}}
+
+function baralhar(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function atual(){const r=rondas[modo];if(!r.ordem.length){r.ordem=baralhar(r.lista.map((_,i)=>i));r.i=0}return r.lista[r.ordem[r.i]]}
+function ganhar(){
+  if(!tentou){estrelas++;$('nEstrelas').textContent=estrelas;try{localStorage.setItem('tico-estrelas',estrelas)}catch(e){}}
+  const e=ELOGIOS[Math.random()*ELOGIOS.length|0];
+  $('balao').textContent=e+(tentou?'':' Ganhaste uma estrela ⭐');
+  $('tico').classList.add('feliz');$('seguinte').hidden=false;$('seguinte').focus();
+  return e;
+}
+function inicio(){tentou=false;$('seguinte').hidden=true;$('tico').classList.remove('feliz')}
+
+/* ---------- Ordenar ---------- */
+let pecas=[], postas=[];
+function mostrarOrdenar(){
+  inicio();
+  const [texto,img]=atual();
+  $('cena').innerHTML=FIG[img];
+  $('balao').textContent='Olha para a imagem. Toca nas palavras pela ordem certa.';
+  const palavras=texto.split(' ');
+  let mistura; do{mistura=baralhar(palavras.map((p,i)=>({p,i})))}while(mistura.every((x,k)=>x.i===k)&&palavras.length>1);
+  pecas=mistura; postas=[];
+  desenharOrdenar();
+}
+function desenharOrdenar(){
+  const total=pecas.length, linha=$('linhaFrase'), banco=$('banco');
+  linha.innerHTML='';banco.innerHTML='';
+  postas.forEach((k,pos)=>{
+    const b=document.createElement('button');b.className='peca posta';b.textContent=pecas[k].p;
+    b.onclick=()=>{if(!$('seguinte').hidden)return;postas.splice(pos,1);desenharOrdenar()};
+    linha.appendChild(b);
+  });
+  for(let i=postas.length;i<total;i++){const v=document.createElement('span');v.className='vazio';linha.appendChild(v)}
+  pecas.forEach((x,k)=>{
+    const b=document.createElement('button');b.className='peca';b.textContent=x.p;
+    if(postas.includes(k))b.classList.add('usada');
+    b.onclick=()=>{if(postas.includes(k))return;postas.push(k);falar(x.p.replace(/[.,!?]/g,''),.75);desenharOrdenar()};
+    banco.appendChild(b);
+  });
+  if(postas.length===total)verificar();
+}
+function verificar(){
+  const pecasLinha=[...$('linhaFrase').children];
+  const ok=postas.every((k,pos)=>pecas[k].i===pos);
+  if(ok){
+    pecasLinha.forEach(b=>b.classList.add('certa'));
+    ganhar();
+    setTimeout(()=>falar(atual()[0],.8),300);
+  }else{
+    tentou=true;
+    postas.forEach((k,pos)=>{if(pecas[k].i!==pos)pecasLinha[pos].classList.add('errada')});
+    $('balao').textContent='Quase! As palavras a vermelho estão no sítio errado. Toca nelas para as tirar.';
+  }
+}
+$('apagar').onclick=()=>{if(!$('seguinte').hidden)return;postas=[];desenharOrdenar()};
+$('ajuda').onclick=()=>{tentou=true;falar(atual()[0],.7);$('balao').textContent='Ouve com atenção e tenta outra vez.'};
+
+/* ---------- Escolher figura ---------- */
+function mostrarFigura(){
+  inicio();
+  const [texto,certa,sil]=atual();
+  $('balao').textContent='Lê a frase. Toca numa palavra para a ouvir.';
+  const f=$('frase');f.innerHTML='';
+  texto.split(' ').forEach(p=>{
+    const limpa=p.replace(/[.,!?]/g,'');
+    const b=document.createElement('button');b.className='palavra';
+    b.dataset.sil=sil[limpa.toLowerCase()]||limpa.toLowerCase();
+    b.innerHTML=`${p}<span class="silabas">${verSilabas?b.dataset.sil:''}</span>`;
+    b.onclick=()=>{document.querySelectorAll('.palavra').forEach(x=>x.classList.remove('a-ler'));b.classList.add('a-ler');falar(limpa,.7)};
+    f.appendChild(b);
+  });
+  const outras=baralhar(FIG_ESCOLHA.filter(k=>k!==certa)).slice(0,2);
+  const g=$('figuras');g.innerHTML='';
+  baralhar([certa,...outras]).forEach(k=>{
+    const b=document.createElement('button');b.className='fig';b.innerHTML=FIG[k];b.setAttribute('aria-label','figura');
+    b.onclick=()=>{
+      if(!$('seguinte').hidden)return;
+      if(k===certa){b.classList.add('certa');falar(ganhar(),1)}
+      else{tentou=true;b.classList.remove('errada');void b.offsetWidth;b.classList.add('errada');$('balao').textContent='Quase! Lê outra vez com calma e tenta de novo.'}
+    };
+    g.appendChild(b);
+  });
+}
+$('ouvir').onclick=()=>{
+  const ws=[...document.querySelectorAll('.palavra')];
+  const u=falar(atual()[0],.75);
+  if(u){let i=0;u.onboundary=e=>{if(e.name&&e.name!=='word')return;ws.forEach(x=>x.classList.remove('a-ler'));if(ws[i])ws[i].classList.add('a-ler');i++};u.onend=()=>ws.forEach(x=>x.classList.remove('a-ler'))}
+};
+$('silabasBtn').onclick=()=>{
+  verSilabas=!verSilabas;$('silabasBtn').textContent=verSilabas?'Esconder sílabas':'Mostrar sílabas';
+  document.querySelectorAll('.palavra').forEach(b=>b.querySelector('.silabas').textContent=verSilabas?b.dataset.sil:'');
+};
+
+/* ---------- Geral ---------- */
+function mostrar(){
+  $('jOrdenar').style.display=modo==='ordenar'?'flex':'none';
+  $('jFigura').hidden=modo!=='figura';$('jFigura').style.display=modo==='figura'?'flex':'none';
+  $('mOrdenar').setAttribute('aria-pressed',modo==='ordenar');$('mFigura').setAttribute('aria-pressed',modo==='figura');
+  $('dica').textContent=modo==='ordenar'?'Olha para a imagem e põe as palavras pela ordem certa. Começa pela palavra com letra grande.':'Lê a frase sozinho e depois escolhe a figura. Usa o botão de ouvir para confirmar.';
+  modo==='ordenar'?mostrarOrdenar():mostrarFigura();
+}
+$('seguinte').onclick=()=>{const r=rondas[modo];r.i++;if(r.i>=r.ordem.length){r.ordem=[]}mostrar();if(!rondas[modo].i)$('balao').textContent='Acabaste todas! Vamos outra vez?'};
+$('mOrdenar').onclick=()=>{modo='ordenar';mostrar()};
+$('mFigura').onclick=()=>{modo='figura';mostrar()};
+mostrar();
+</script>
+
+</body></html>

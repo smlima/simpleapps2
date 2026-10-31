@@ -1,0 +1,328 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Onde Está o Gato?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: one-screen game — header, mode switch, scene card (SVG), prompt, big answer buttons */
+:root{
+  --bg:#EEF4F1; --card:#FFFFFF; --ink:#1F2A44; --muted:#5E6B80;
+  --accent:#FF7A3D; --ok:#2E9E6A; --bad:#D9485F; --line:#D5E0DB;
+  --sky:#D3EAF8; --ground:#BFDC95; --ground2:#A9CB7D;
+  --wood:#B97A4A; --wood2:#94603A; --box:#D9A55E; --box2:#B8843F; --boxin:#6E4C25;
+  --bush:#4FA46A; --bush2:#3E8A57; --cat:#FFA052; --cat2:#E9782C; --catline:#6B3814; --catbelly:#FFF3E6;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13202A; --card:#1C2C38; --ink:#EAF1F5; --muted:#9FB0BF; --line:#2B3E4C;
+  --sky:#2A4458; --ground:#5E7A45; --ground2:#4F6A39; --boxin:#3E2A14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13202A; --card:#1C2C38; --ink:#EAF1F5; --muted:#9FB0BF; --line:#2B3E4C;
+  --sky:#2A4458; --ground:#5E7A45; --ground2:#4F6A39; --boxin:#3E2A14; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0;line-height:1.1;text-wrap:balance}
+.stars{display:flex;align-items:center;gap:6px;font-family:var(--display);font-weight:800;font-size:1.3rem;
+  background:var(--card);border:2px solid var(--line);border-radius:999px;padding:2px 14px 2px 10px;font-variant-numeric:tabular-nums}
+.stars svg{width:22px;height:22px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:5px}
+.modes button{font:800 1rem var(--body);color:var(--muted);background:transparent;border:0;border-radius:11px;padding:10px 6px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.scene{background:var(--card);border:2px solid var(--line);border-radius:22px;overflow:hidden;line-height:0}
+.scene svg{width:100%;height:auto;display:block}
+.prompt{display:flex;align-items:center;gap:10px;min-height:52px}
+.prompt p{margin:0;font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1.2;flex:1;min-width:0;text-wrap:balance}
+.prompt b{color:var(--accent)}
+.speak{flex:none;width:52px;height:52px;border-radius:50%;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.speak svg{width:26px;height:26px}
+.choices{display:grid;gap:10px}
+.choice{font:800 1.5rem var(--display);color:var(--ink);background:var(--card);border:3px solid var(--line);
+  border-radius:18px;padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;
+  box-shadow:0 4px 0 var(--line);transition:transform .08s}
+.choice:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.choice .ico{width:40px;height:40px;flex:none}
+.choice.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--card))}
+.choice.bad{border-color:var(--bad);animation:shake .35s}
+.hint{color:var(--muted);font-weight:700;margin:0;text-align:center;font-size:.95rem}
+.foot{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.foot label{display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:700;cursor:pointer}
+.foot input{width:20px;height:20px;accent-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ghost{cursor:pointer}
+.ghost circle{fill:color-mix(in srgb,#fff 55%,transparent);stroke:var(--ink);stroke-width:3;stroke-dasharray:7 6;transition:fill .15s}
+.ghost:hover circle,.ghost:focus circle{fill:#fff}
+.ghost text{font:800 26px var(--display);fill:var(--ink);pointer-events:none}
+.ghost.wrong circle{stroke:var(--bad);fill:color-mix(in srgb,var(--bad) 25%,transparent)}
+.ghost.hot circle{fill:color-mix(in srgb,var(--accent) 35%,#fff);stroke:var(--accent);stroke-dasharray:none}
+.scene.drag svg{touch-action:none;user-select:none;-webkit-user-select:none}
+#dragcat{cursor:grab}
+#dragcat.dragging{cursor:grabbing}
+.wiggle{transform-box:fill-box;transform-origin:50% 100%;animation:wiggle 1.6s ease-in-out infinite}
+@keyframes wiggle{0%,70%,100%{transform:rotate(0)}78%{transform:rotate(-6deg)}86%{transform:rotate(6deg)}94%{transform:rotate(-3deg)}}
+.pop{transform-box:fill-box;transform-origin:50% 100%;animation:pop .5s}
+.lr{font:800 15px var(--body);fill:var(--ink);opacity:.75}
+.lr.flash{animation:flash 1s 2}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes flash{50%{opacity:1;fill:var(--accent)}}
+@media (prefers-reduced-motion:reduce){.wiggle,.pop,.choice.bad,.lr.flash{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Onde está o gato?</h1>
+    <div class="stars" aria-label="Estrelas"><svg viewBox="0 0 24 24"><path fill="#FFC23D" stroke="#C98A12" stroke-width="1.5" stroke-linejoin="round" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"/></svg><span id="score">0</span></div>
+  </header>
+  <div class="modes" role="group" aria-label="Modo de jogo">
+    <button id="m1" aria-pressed="true">Onde está?</button>
+    <button id="m2" aria-pressed="false">Põe o gato</button>
+  </div>
+  <div class="scene" id="scene"></div>
+  <div class="prompt">
+    <p id="q"></p>
+    <button class="speak" id="speak" aria-label="Ouvir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+  </div>
+  <div class="choices" id="choices"></div>
+  <p class="hint" id="hint"></p>
+  <div class="foot">
+    <label><input type="checkbox" id="lrhelp" checked> Mostrar esquerda e direita</label>
+    <label><input type="checkbox" id="voice" checked> Voz</label>
+  </div>
+</div>
+
+<script>
+const C = {
+  cima:{word:'em cima', phrase:o=>'em cima '+o, arrow:'up'},
+  baixo:{word:'em baixo', phrase:o=>'debaixo '+o, arrow:'down'},
+  esquerda:{word:'à esquerda', phrase:o=>'à esquerda '+o, arrow:'left'},
+  direita:{word:'à direita', phrase:o=>'à direita '+o, arrow:'right'},
+  dentro:{word:'dentro', phrase:o=>'dentro '+o, arrow:'in'},
+  fora:{word:'fora', phrase:o=>'fora '+o, arrow:'out'},
+  frente:{word:'à frente', phrase:o=>'à frente '+o, arrow:'front'},
+  atras:{word:'atrás', phrase:o=>'atrás '+o, arrow:'back'},
+  entre:{word:'entre', phrase:()=>'entre as duas caixas', arrow:'between'}
+};
+const CONFLICT = {fora:['esquerda','direita'], esquerda:['fora'], direita:['fora']};
+// spots: [concept, x, baseY, scale]
+const S = {
+  mesa:{obj:'da mesa', spots:[['cima',200,138,1],['baixo',200,250,.82],['esquerda',68,255,1],['direita',332,255,1]]},
+  caixa:{obj:'da caixa', spots:[['dentro',205,222,.9],['fora',72,255,1],['fora',336,255,1]]},
+  arbusto:{obj:'do arbusto', spots:[['atras',200,180,.78],['frente',200,290,1.1],['esquerda',58,255,1],['direita',342,255,1]]},
+  caixas:{obj:'das caixas', spots:[['entre',200,255,.95],['esquerda',42,255,.8],['direita',358,255,.8]]}
+};
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function cat(x,y,s,pop,id,cls){
+  const tail='M14 -8 C40 -6 42 -36 27 -38 C18 -39 17 -29 25 -29';
+  return `<g ${id?`id="${id}"`:''} transform="translate(${x} ${y}) scale(${s})"><g class="${pop?'pop':''} ${cls||''}">
+  <path d="${tail}" fill="none" stroke="var(--catline)" stroke-width="10.5" stroke-linecap="round"/>
+  <path d="${tail}" fill="none" stroke="var(--cat)" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="0" cy="-17" rx="20" ry="17" fill="var(--cat)" stroke="var(--catline)" stroke-width="2.5"/>
+  <ellipse cx="0" cy="-14" rx="11" ry="11" fill="var(--catbelly)"/>
+  <ellipse cx="-9" cy="-1" rx="7.5" ry="5" fill="var(--catbelly)" stroke="var(--catline)" stroke-width="2"/>
+  <ellipse cx="9" cy="-1" rx="7.5" ry="5" fill="var(--catbelly)" stroke="var(--catline)" stroke-width="2"/>
+  <path d="M-25 -56 L-22 -84 L-4 -71 Z M25 -56 L22 -84 L4 -71 Z" fill="var(--cat)" stroke="var(--catline)" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M-19 -62 L-18 -77 L-9 -70 Z M19 -62 L18 -77 L9 -70 Z" fill="#FFB3C1"/>
+  <ellipse cx="0" cy="-52" rx="28" ry="23" fill="var(--cat)" stroke="var(--catline)" stroke-width="2.5"/>
+  <path d="M-5 -73 L-4 -67 M0 -75 V-67 M5 -73 L4 -67" stroke="var(--cat2)" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="0" cy="-42" rx="11" ry="7" fill="var(--catbelly)"/>
+  <ellipse cx="-10.5" cy="-54" rx="5.2" ry="6.8" fill="#2A1A10"/><ellipse cx="10.5" cy="-54" rx="5.2" ry="6.8" fill="#2A1A10"/>
+  <circle cx="-8.5" cy="-57" r="2.3" fill="#fff"/><circle cx="12.5" cy="-57" r="2.3" fill="#fff"/>
+  <circle cx="-12" cy="-51" r="1.1" fill="#fff"/><circle cx="9" cy="-51" r="1.1" fill="#fff"/>
+  <ellipse cx="-19" cy="-44" rx="5" ry="3" fill="#FF8FA3" opacity=".75"/><ellipse cx="19" cy="-44" rx="5" ry="3" fill="#FF8FA3" opacity=".75"/>
+  <path d="M-2.8 -46.5 h5.6 l-2.8 3 z" fill="#E0567A"/>
+  <path d="M-5 -41.5 q2.5 3 5 0 q2.5 3 5 0" fill="none" stroke="var(--catline)" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M-13 -45 L-30 -47 M-13 -42 L-29 -39 M13 -45 L30 -47 M13 -42 L29 -39" stroke="var(--catline)" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+  </g></g>`;
+}
+const START=[62,112,.8];
+const cloud=`<g fill="#fff" stroke="#C9DDEA" stroke-width="2.5"><ellipse cx="62" cy="114" rx="44" ry="13"/><circle cx="40" cy="108" r="14"/><circle cx="84" cy="108" r="14"/><ellipse cx="62" cy="114" rx="42" ry="11" stroke="none"/></g>`;
+const crate=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="var(--box)" stroke="var(--box2)" stroke-width="3"/>
+  <path d="M${x} ${y+h/2} H${x+w} M${x+w/2} ${y} V${y+h}" stroke="var(--box2)" stroke-width="3"/>`;
+
+function drawRef(key, catSvg, concept){
+  let behind='', front='';
+  if(key==='mesa'){
+    const table=`<rect x="142" y="148" width="12" height="104" rx="3" fill="var(--wood2)"/><rect x="246" y="148" width="12" height="104" rx="3" fill="var(--wood2)"/>
+      <rect x="124" y="136" width="152" height="16" rx="5" fill="var(--wood)" stroke="var(--wood2)" stroke-width="3"/>`;
+    return table + (catSvg||'');
+  }
+  if(key==='caixa'){
+    const open=`<polygon points="150,190 172,168 272,168 250,190" fill="var(--boxin)" stroke="var(--box2)" stroke-width="3" stroke-linejoin="round"/>`;
+    const side=`<polygon points="250,190 272,168 272,232 250,254" fill="var(--box2)" stroke="var(--box2)" stroke-width="3" stroke-linejoin="round"/>`;
+    const face=`<rect x="150" y="190" width="100" height="64" rx="3" fill="var(--box)" stroke="var(--box2)" stroke-width="3"/>`;
+    const flaps=`<polygon points="150,190 132,172 154,168 172,168" fill="var(--box)" stroke="var(--box2)" stroke-width="3" stroke-linejoin="round"/>`;
+    if(concept==='dentro') return open+catSvg+side+face+flaps;
+    return open+side+face+flaps+(catSvg||'');
+  }
+  if(key==='arbusto'){
+    const bush=`<g stroke="var(--bush2)" stroke-width="3"><circle cx="150" cy="220" r="36" fill="var(--bush)"/><circle cx="250" cy="220" r="36" fill="var(--bush)"/>
+      <circle cx="200" cy="200" r="44" fill="var(--bush)"/><rect x="128" y="218" width="144" height="38" rx="14" fill="var(--bush)" stroke="none"/></g>
+      <circle cx="176" cy="196" r="5" fill="#E8546B"/><circle cx="226" cy="222" r="5" fill="#E8546B"/><circle cx="158" cy="232" r="5" fill="#E8546B"/>`;
+    return concept==='atras' ? catSvg+bush : bush+(catSvg||'');
+  }
+  if(key==='caixas') return crate(84,190,72,64)+crate(244,190,72,64)+(catSvg||'');
+}
+
+function sceneSvg(key, spot, ghosts, pop, start){
+  const catSvg = spot ? cat(spot[1],spot[2],spot[3],pop) : '';
+  let g='';
+  if(ghosts) ghosts.forEach((sp,i)=>{
+    const cy = sp[2]-42*sp[3];
+    g+=`<g class="ghost" data-i="${i}" tabindex="0" role="button" aria-label="lugar ${i+1}"><circle cx="${sp[1]}" cy="${cy}" r="${26*Math.max(sp[3],.85)}"/></g>`;
+  });
+  if(start) g+=cloud+cat(START[0],START[1],START[2],false,'dragcat','wiggle');
+  const lr = document.getElementById('lrhelp').checked;
+  return `<svg viewBox="0 0 400 300" role="img" aria-label="cena">
+    <rect width="400" height="300" fill="var(--sky)"/>
+    <circle cx="350" cy="48" r="22" fill="#FFD95A"/>
+    <rect y="236" width="400" height="64" fill="var(--ground)"/><rect y="236" width="400" height="5" fill="var(--ground2)"/>
+    ${drawRef(key, catSvg, spot&&spot[0])}
+    ${g}
+    ${lr?`<text class="lr" id="lrL" x="12" y="24">← esquerda</text><text class="lr" id="lrR" x="388" y="24" text-anchor="end" ${''}>direita →</text>`:''}
+  </svg>`.replace('cy="48" r="22"', lr?'cy="58" r="20"':'cy="48" r="22"');
+}
+
+function icon(kind){
+  const st='stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const b='<rect x="10" y="16" width="20" height="16" rx="2" fill="none" stroke="var(--muted)" stroke-width="2.5"/>';
+  const d='<circle cx="20" cy="24" r="4.5" fill="var(--accent)"/>';
+  const at=(x,y)=>`<circle cx="${x}" cy="${y}" r="4.5" fill="var(--accent)"/>`;
+  const m={
+    up:b+at(20,9), down:'<rect x="8" y="8" width="24" height="5" rx="2" fill="none" stroke="var(--muted)" stroke-width="2.5"/>'+at(20,26),
+    left:b.replace('x="10"','x="16"')+at(7,24), right:b.replace('x="10"','x="4"')+at(33,24),
+    in:'<path d="M8 14 V32 H32 V14" fill="none" stroke="var(--muted)" stroke-width="2.5"/>'+d, out:'<path d="M14 14 V32 H34 V14" fill="none" stroke="var(--muted)" stroke-width="2.5"/>'+at(6,28),
+    front:'<rect x="10" y="10" width="20" height="16" rx="2" fill="none" stroke="var(--muted)" stroke-width="2.5"/><circle cx="20" cy="27" r="6.5" fill="var(--accent)"/>',
+    back:'<circle cx="20" cy="14" r="4" fill="var(--accent)" opacity=".6"/><rect x="10" y="16" width="20" height="16" rx="2" fill="var(--card)" stroke="var(--muted)" stroke-width="2.5"/>',
+    between:'<rect x="3" y="18" width="10" height="14" rx="2" fill="none" stroke="var(--muted)" stroke-width="2.5"/><rect x="27" y="18" width="10" height="14" rx="2" fill="none" stroke="var(--muted)" stroke-width="2.5"/>'+at(20,25)
+  };
+  return `<svg class="ico" viewBox="0 0 40 40">${m[kind]}</svg>`;
+}
+
+let mode=1, score=0, cur=null, locked=false;
+try{score=+localStorage.getItem('gato-stars')||0}catch(e){}
+const $=id=>document.getElementById(id);
+$('score').textContent=score;
+
+let voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices()}catch(e){}}
+loadVoices(); try{speechSynthesis.onvoiceschanged=loadVoices}catch(e){}
+function say(t){
+  if(!$('voice').checked) return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='pt-PT';u.rate=.9;
+    const v=voices.find(v=>v.lang==='pt-PT')||voices.find(v=>/^pt/i.test(v.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}
+}
+let actx;
+function beep(ok){
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const notes=ok?[523,659,784]:[220,180];
+    notes.forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=ok?'triangle':'sine';o.frequency.value=f;
+      const t=actx.currentTime+i*.11;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.2,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.2);
+      o.connect(g).connect(actx.destination);o.start(t);o.stop(t+.22)})}catch(e){}
+}
+function addStar(){score++;$('score').textContent=score;try{localStorage.setItem('gato-stars',score)}catch(e){}}
+function flashLR(c){if(c!=='esquerda'&&c!=='direita')return;['lrL','lrR'].forEach(id=>{const el=$(id);if(el){el.classList.remove('flash');void el.getBBox;el.classList.add('flash')}})}
+
+function speakText(){ if(!cur) return; say(cur.speech) }
+
+function round1(){
+  locked=false;
+  const key=rnd(Object.keys(S)), sc=S[key], spot=rnd(sc.spots), c=spot[0];
+  const banned=new Set([c,...(CONFLICT[c]||[])]);
+  const same=shuffle([...new Set(sc.spots.map(s=>s[0]))].filter(x=>!banned.has(x)));
+  const others=shuffle(Object.keys(C).filter(x=>!banned.has(x)&&!same.includes(x)));
+  const opts=shuffle([c,...same.concat(others).slice(0,2)]);
+  cur={key,spot,c,opts,speech:'Onde está o gato?'};
+  $('scene').innerHTML=sceneSvg(key,spot,null,true);
+  $('q').innerHTML='Onde está o gato?';
+  $('hint').textContent='';
+  const box=$('choices');box.innerHTML='';
+  opts.forEach(o=>{const b=document.createElement('button');b.className='choice';b.innerHTML=icon(C[o].arrow)+`<span>${C[o].word}</span>`;
+    b.onclick=()=>pick1(o,b);box.appendChild(b)});
+  say(cur.speech);
+}
+function pick1(o,b){
+  if(locked) return;
+  const full='O gato está '+C[cur.c].phrase(S[cur.key].obj)+'.';
+  if(o===cur.c){
+    locked=true;b.classList.add('ok');beep(true);addStar();
+    $('q').innerHTML='Muito bem! O gato está <b>'+C[cur.c].phrase(S[cur.key].obj)+'</b>.';
+    say('Muito bem! '+full);setTimeout(round1,2400);
+  }else{
+    b.classList.remove('bad');void b.offsetWidth;b.classList.add('bad');beep(false);
+    $('hint').textContent=(o==='esquerda'||o==='direita'||cur.c==='esquerda'||cur.c==='direita')?'Olha para as setas lá em cima.':'Quase! Tenta outra vez.';
+    flashLR(cur.c);say('Tenta outra vez');
+  }
+}
+
+function round2(){
+  locked=false;
+  const key=rnd(Object.keys(S)), sc=S[key], c=rnd(sc.spots)[0];
+  cur={key,c,speech:'Põe o gato '+C[c].phrase(sc.obj)};
+  $('q').innerHTML='Põe o gato <b>'+C[c].phrase(sc.obj)+'</b>.';
+  $('hint').textContent='Arrasta o gato da nuvem para o sítio certo.';
+  $('choices').innerHTML='';
+  draw2(null);
+  say(cur.speech);
+}
+function svgPt(svg,e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+function draw2(spot,wrongI){
+  const sc=S[cur.key];
+  const ghosts=spot?null:sc.spots;
+  $('scene').innerHTML=sceneSvg(cur.key,spot,ghosts,!!spot,!spot);
+  if(!ghosts) return;
+  const svg=$('scene').querySelector('svg'), dc=$('dragcat'), gs=[...$('scene').querySelectorAll('.ghost')];
+  gs.forEach(g=>{
+    const i=+g.dataset.i; if(i===wrongI) g.classList.add('wrong');
+    const go=()=>pick2(i); g.addEventListener('click',go);
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+  });
+  const centers=sc.spots.map(sp=>[sp[1],sp[2]-42*sp[3]]);
+  let drag=false, hot=-1;
+  const nearest=p=>{let best=-1,bd=55;centers.forEach((c,i)=>{const d=Math.hypot(c[0]-p.x,c[1]-p.y);if(d<bd){bd=d;best=i}});return best};
+  const move=e=>{
+    const p=svgPt(svg,e);
+    dc.setAttribute('transform',`translate(${p.x} ${p.y+40}) scale(.9)`);
+    const h=nearest(p); if(h!==hot){gs.forEach((g,i)=>g.classList.toggle('hot',i===h));hot=h}
+  };
+  dc.addEventListener('pointerdown',e=>{
+    if(locked) return; e.preventDefault(); drag=true;
+    try{dc.setPointerCapture(e.pointerId)}catch(_){}
+    dc.querySelector('g').classList.remove('wiggle'); dc.classList.add('dragging'); move(e);
+  });
+  dc.addEventListener('pointermove',e=>{if(drag) move(e)});
+  const end=e=>{
+    if(!drag) return; drag=false; dc.classList.remove('dragging');
+    const i=nearest(svgPt(svg,e));
+    if(i>=0) pick2(i);
+    else{dc.setAttribute('transform',`translate(${START[0]} ${START[1]}) scale(${START[2]})`);gs.forEach(g=>g.classList.remove('hot'));dc.querySelector('g').classList.add('wiggle')}
+  };
+  dc.addEventListener('pointerup',end); dc.addEventListener('pointercancel',end);
+}
+function pick2(i){
+  if(locked) return;
+  const sp=S[cur.key].spots[i];
+  if(sp[0]===cur.c){
+    locked=true;draw2(sp);beep(true);addStar();
+    $('q').innerHTML='Boa! O gato está <b>'+C[cur.c].phrase(S[cur.key].obj)+'</b>.';$('hint').textContent='';
+    say('Boa! O gato está '+C[cur.c].phrase(S[cur.key].obj));setTimeout(round2,2400);
+  }else{
+    locked=true;draw2(sp);beep(false);
+    $('hint').textContent='Ups! Aí o gato está '+C[sp[0]].phrase(S[cur.key].obj)+'.';
+    say('Ups! Aí o gato está '+C[sp[0]].phrase(S[cur.key].obj));
+    setTimeout(()=>{locked=false;draw2(null,i);flashLR(cur.c);$('hint').textContent+=' Tenta outra vez.'},1800);
+  }
+}
+
+function setMode(m){mode=m;$('scene').classList.toggle('drag',m===2);$('m1').setAttribute('aria-pressed',m===1);$('m2').setAttribute('aria-pressed',m===2);m===1?round1():round2()}
+$('m1').onclick=()=>setMode(1);$('m2').onclick=()=>setMode(2);
+$('speak').onclick=speakText;
+$('lrhelp').onchange=()=>{ if(mode===1) $('scene').innerHTML=sceneSvg(cur.key,cur.spot,null,false); else draw2(null) };
+setMode(1);
+</script>
+
+</body></html>

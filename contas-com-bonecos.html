@@ -1,0 +1,329 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contas com bonecos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wood:#8A5A33; --board:#2F5D4A; --board-2:#27503F; --chalk:#F7F5EE; --chalk-soft:rgba(247,245,238,.72);
+  --yellow:#FFD54A; --pink:#FF8FB8; --blue:#7FD0FF; --orange:#FFAE5C; --red:#FF6B5E; --ink:#1E3328;
+  --bs:36px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --wood:#4B321E; --board:#1F3F32; --board-2:#1A362B; } }
+:root[data-theme="dark"]{ --wood:#4B321E; --board:#1F3F32; --board-2:#1A362B; }
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0; min-height:100%; background:var(--wood); color:var(--chalk);
+  font-family:"Fredoka","Nunito","Trebuchet MS",system-ui,sans-serif; -webkit-tap-highlight-color:transparent}
+button{font:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:3px solid var(--yellow); outline-offset:3px}
+
+.board{max-width:980px; margin:10px auto; padding:14px 16px 28px; background:var(--board);
+  border-radius:20px; box-shadow:inset 0 0 0 6px var(--board-2), 0 6px 0 rgba(0,0,0,.18); min-height:calc(100% - 20px)}
+@media (min-width:600px){ .board{margin:18px auto; padding:20px 28px 36px} }
+
+header{display:flex; align-items:center; gap:10px; margin-bottom:10px}
+header h1{flex:1; margin:0; font-size:1.25rem; font-weight:600; color:var(--chalk-soft)}
+.chip{border:2px solid var(--chalk-soft); background:transparent; border-radius:999px; padding:6px 12px; font-size:1rem; font-weight:500}
+.stars{font-weight:600; font-size:1.1rem; white-space:nowrap}
+
+/* menu */
+.hello{font-size:clamp(2rem,7vw,3.2rem); font-weight:700; margin:18px 0 22px; line-height:1.1}
+.tiles{display:grid; gap:16px}
+@media (min-width:640px){ .tiles{grid-template-columns:1fr 1fr} }
+.tile{border:3px dashed var(--chalk-soft); background:rgba(255,255,255,.04); border-radius:22px; padding:22px 18px;
+  text-align:left; display:flex; flex-direction:column; gap:14px; min-height:170px}
+.tile:hover{background:rgba(255,255,255,.08)}
+.tile b{font-size:1.7rem; font-weight:600}
+.tile small{font-size:1rem; color:var(--chalk-soft)}
+.tile .sample{display:flex; align-items:flex-end; gap:4px; font-size:2.6rem; font-weight:700; --bs:36px}
+
+/* controles */
+.seg{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 4px}
+.seg button{border:2px solid var(--chalk-soft); background:transparent; border-radius:14px; padding:8px 14px; font-size:1.05rem; font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--chalk); color:var(--ink); border-color:var(--chalk)}
+.ask{font-size:clamp(1.6rem,5vw,2.2rem); font-weight:600; margin:18px 0 2px}
+.hint{color:var(--chalk-soft); margin:0 0 12px; font-size:1rem}
+
+/* bonecos */
+.grp{display:grid; grid-template-columns:repeat(5,var(--bs)); gap:6px 6px; justify-content:start}
+.grp.empty{min-height:var(--bs)}
+.b{position:relative; width:var(--bs); height:calc(var(--bs) * 1.58); padding:0; border:0; background:none; display:block}
+.b svg{width:100%; height:100%; display:block; overflow:visible; filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.b[data-c] svg{animation:hop .35s ease}
+@keyframes hop{40%{transform:translateY(-18%)}}
+.b.riscado svg{opacity:.35}
+.b.riscado::after{content:"✕"; position:absolute; inset:0; display:grid; place-items:center;
+  color:var(--red); font-weight:700; font-size:calc(var(--bs) * .95); line-height:1}
+.tag{position:absolute; top:-6px; right:-6px; min-width:22px; height:22px; border-radius:11px; padding:0 5px;
+  background:var(--yellow); color:var(--ink); font-style:normal; font-weight:700; font-size:.85rem; display:grid; place-items:center}
+
+.field{--bs:46px; padding:12px 4px; display:flex; justify-content:center}
+@media (min-width:600px){ .field{--bs:58px} }
+
+/* equação */
+.eq{display:flex; flex-direction:column; gap:10px; margin-top:14px}
+.term{display:flex; align-items:center; gap:14px}
+.num{min-width:72px; height:72px; display:grid; place-items:center; font-size:3rem; font-weight:700; line-height:1}
+.num.q{border:3px dashed var(--yellow); border-radius:16px; color:var(--yellow)}
+.sign{font-size:2.6rem; font-weight:700; width:72px; text-align:center; line-height:1; color:var(--yellow)}
+.zero{color:var(--chalk-soft); font-size:1.1rem}
+@media (min-width:760px){
+  :root{--bs:42px}
+  .eq{flex-direction:row; justify-content:center; align-items:flex-start; gap:16px}
+  .term{flex-direction:column; gap:12px}
+  .sign{width:auto; padding-top:14px}
+}
+
+/* respostas */
+.opts{display:flex; gap:16px; justify-content:center; margin:22px 0 8px; flex-wrap:wrap}
+.opt{width:84px; height:84px; border-radius:50%; border:0; background:var(--chalk); color:var(--ink);
+  font-size:2.4rem; font-weight:700; box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.opt:active{transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.opt.ok{background:var(--yellow); animation:pop .4s ease}
+.opt.no{opacity:.35; animation:shake .35s ease}
+.opt:disabled{cursor:default}
+.fb{min-height:56px; text-align:center; font-size:1.4rem; font-weight:500}
+.fb .big{font-size:2.6rem; font-weight:700; color:var(--yellow); margin-right:6px}
+.next{display:block; margin:12px auto 0; border:0; border-radius:18px; background:var(--yellow); color:var(--ink);
+  font-size:1.5rem; font-weight:600; padding:14px 34px; box-shadow:0 5px 0 rgba(0,0,0,.25)}
+@keyframes pop{50%{transform:scale(1.15)}}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="board">
+  <header>
+    <button class="chip" id="home" hidden>🏠 Menu</button>
+    <h1 id="title">Contas com bonecos</h1>
+    <span class="stars" id="stars" aria-label="estrelas">⭐ 0</span>
+    <button class="chip" id="sound" aria-label="Som">🔊</button>
+  </header>
+
+  <!-- MENU -->
+  <section id="s-menu">
+    <p class="hello">O que queres fazer?</p>
+    <div class="tiles">
+      <button class="tile" data-go="count">
+        <span class="sample" id="sample-count"></span>
+        <b>Contar bonecos</b>
+        <small>Quantos bonecos estão no quadro?</small>
+      </button>
+      <button class="tile" data-go="math">
+        <span class="sample">2 + 1</span>
+        <b>Fazer contas</b>
+        <small>Somar e tirar, com bonecos para ajudar.</small>
+      </button>
+    </div>
+  </section>
+
+  <!-- CONTAR -->
+  <section id="s-count" hidden>
+    <div class="seg" id="count-level">
+      <button data-v="5">Até 5</button><button data-v="10">Até 10</button><button data-v="20">Até 20</button>
+    </div>
+    <p class="ask">Quantos bonecos há?</p>
+    <p class="hint">Toca em cada boneco para contar.</p>
+    <div class="field" id="count-field"></div>
+    <div class="opts" id="count-opts"></div>
+    <div class="fb" id="count-fb" aria-live="polite"></div>
+  </section>
+
+  <!-- CONTAS -->
+  <section id="s-math" hidden>
+    <div class="seg" id="math-op">
+      <button data-v="+">➕ Somar</button><button data-v="-">➖ Tirar</button><button data-v="mix">Misturar</button>
+    </div>
+    <div class="seg" id="math-level">
+      <button data-v="5">Até 5</button><button data-v="10">Até 10</button>
+    </div>
+    <div class="eq" id="eq"></div>
+    <div class="opts" id="math-opts"></div>
+    <div class="fb" id="math-fb" aria-live="polite"></div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const COL = { blue:"#7FD0FF", pink:"#FF8FB8", yellow:"#FFD54A", orange:"#FFAE5C" };
+const state = { score:0, sound:true, countMax:10, mathMax:10, op:"+" };
+try { const s = JSON.parse(localStorage.getItem("contas-bonecos") || "null"); if (s) Object.assign(state, s); } catch(e) {}
+function save(){ try { localStorage.setItem("contas-bonecos", JSON.stringify(state)); } catch(e) {} }
+
+const rnd = (a,b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* voz em português */
+let voice = null;
+function pickVoice(){ try { const vs = speechSynthesis.getVoices();
+  voice = vs.find(v => v.lang === "pt-PT") || vs.find(v => (v.lang||"").startsWith("pt")) || null; } catch(e) {} }
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(t){
+  if (!state.sound || !("speechSynthesis" in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t);
+    u.lang = "pt-PT"; if (voice) u.voice = voice; u.rate = 0.9; speechSynthesis.speak(u); } catch(e) {}
+}
+
+/* desenho do boneco */
+const INK = "#1E3328";
+const ACCS = [
+  /* antenas */ `<path d="M15 6 L11 -2 M25 6 L29 -2" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/><circle cx="11" cy="-2.5" r="2.4" fill="#FFD54A"/><circle cx="29" cy="-2.5" r="2.4" fill="#FFD54A"/>`,
+  /* laço */ `<path d="M27 5 L21 1 L22 9 Z M27 5 L33 1 L32 9 Z" fill="#FF4F8B"/><circle cx="27" cy="5" r="2" fill="#E0306F"/>`,
+  /* chapéu de festa */ `<path d="M13 7 L20 -5 L27 7 Z" fill="#9B7BFF"/><path d="M15.5 3 L24.5 3" stroke="#FFD54A" stroke-width="1.6"/><circle cx="20" cy="-5" r="2.3" fill="#FFD54A"/>`,
+  /* caracol de cabelo */ `<path d="M20 6 C 16 0, 24 -3, 23 2 C 22.5 5, 18 4, 19.5 1.5" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`,
+  /* gorro */ `<path d="M8 13 C 8 1, 32 1, 32 13 Z" fill="#4FC38A"/><rect x="7" y="11" width="26" height="4" rx="2" fill="#2FA36B"/><circle cx="20" cy="1.5" r="3" fill="#F7F5EE"/>`,
+  /* orelhas redondas */ `<circle cx="9" cy="8" r="4.5" fill="currentColor"/><circle cx="31" cy="8" r="4.5" fill="currentColor"/><circle cx="9" cy="8" r="2.2" fill="#FF8FB8" opacity=".7"/><circle cx="31" cy="8" r="2.2" fill="#FF8FB8" opacity=".7"/>`
+];
+function svgBoneco(c, acc = 0){
+  return `<svg viewBox="0 -7 40 63" aria-hidden="true" style="color:${c}">
+    ${acc === 5 ? ACCS[5] : ""}
+    <ellipse cx="14" cy="52" rx="5" ry="3" fill="${c}"/><ellipse cx="26" cy="52" rx="5" ry="3" fill="${c}"/>
+    <ellipse cx="14" cy="52" rx="5" ry="3" fill="#000" opacity=".18"/><ellipse cx="26" cy="52" rx="5" ry="3" fill="#000" opacity=".18"/>
+    <ellipse cx="6.5" cy="34" rx="3.4" ry="5.5" transform="rotate(35 6.5 34)" fill="${c}"/>
+    <ellipse cx="33.5" cy="34" rx="3.4" ry="5.5" transform="rotate(-35 33.5 34)" fill="${c}"/>
+    <ellipse cx="20" cy="40" rx="12" ry="11.5" fill="${c}"/>
+    <ellipse cx="20" cy="42" rx="7" ry="6.5" fill="#fff" opacity=".35"/>
+    <circle cx="20" cy="18" r="13.5" fill="${c}"/>
+    <circle cx="13.5" cy="10.5" r="3" fill="#fff" opacity=".4"/>
+    <ellipse cx="14.8" cy="18" rx="3.4" ry="4" fill="#fff"/><ellipse cx="25.2" cy="18" rx="3.4" ry="4" fill="#fff"/>
+    <circle cx="15.5" cy="18.8" r="2.2" fill="${INK}"/><circle cx="25.9" cy="18.8" r="2.2" fill="${INK}"/>
+    <circle cx="16.3" cy="17.8" r=".8" fill="#fff"/><circle cx="26.7" cy="17.8" r=".8" fill="#fff"/>
+    <ellipse cx="10" cy="24" rx="2.6" ry="1.6" fill="#FF6F91" opacity=".6"/><ellipse cx="30" cy="24" rx="2.6" ry="1.6" fill="#FF6F91" opacity=".6"/>
+    <path d="M16.5 24.5 q3.5 3.2 7 0" stroke="${INK}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    ${acc !== 5 ? ACCS[acc] : ""}
+  </svg>`;
+}
+const list = (n, color, cls="") => Array.from({length:n}, () => ({color, cls}));
+function group(items, tappable=false){
+  const off = rnd(0, ACCS.length - 1);
+  return `<div class="grp">${items.map((it,i) => {
+    const s = svgBoneco(it.color, (i + off) % ACCS.length);
+    return tappable
+      ? `<button type="button" class="b ${it.cls}" data-i="${i}" aria-label="boneco">${s}</button>`
+      : `<span class="b ${it.cls}">${s}</span>`; }).join("")}</div>`;
+}
+
+/* estrelas e som */
+function updateStars(){ $("#stars").textContent = "⭐ " + state.score; }
+function updateSound(){ $("#sound").textContent = state.sound ? "🔊" : "🔇"; }
+$("#sound").onclick = () => { state.sound = !state.sound; save(); updateSound(); if (!state.sound && "speechSynthesis" in window) speechSynthesis.cancel(); };
+
+/* escolhas de resposta */
+function makeOptions(correct, min, max){
+  const set = new Set([correct]); let g = 0;
+  while (set.size < 3 && g++ < 200){ const d = correct + rnd(-3,3); if (d >= min && d <= max) set.add(d); }
+  for (let v = min; set.size < 3; v++) set.add(v);
+  return shuffle([...set]);
+}
+function renderOptions(box, fb, correct, min, max, onCorrect){
+  box.innerHTML = makeOptions(correct, min, max).map(v => `<button class="opt" data-v="${v}">${v}</button>`).join("");
+  box.querySelectorAll(".opt").forEach(btn => btn.onclick = () => {
+    if (+btn.dataset.v === correct){
+      btn.classList.add("ok");
+      box.querySelectorAll(".opt").forEach(b => b.disabled = true);
+      state.score++; save(); updateStars(); onCorrect();
+    } else {
+      btn.classList.add("no"); btn.disabled = true;
+      fb.textContent = "Quase! Tenta outra vez."; say("Quase! Tenta outra vez.");
+    }
+  });
+}
+function nextButton(fb, fn){
+  const b = document.createElement("button"); b.className = "next"; b.textContent = "Seguinte";
+  b.onclick = fn; fb.appendChild(b); b.focus({preventScroll:true});
+}
+
+/* CONTAR */
+let cur = {};
+function newCount(){
+  const n = rnd(1, state.countMax);
+  cur = { n, tapped:0 };
+  const color = pick([COL.blue, COL.yellow, COL.pink, COL.orange]);
+  const field = $("#count-field"), fb = $("#count-fb");
+  field.innerHTML = group(list(n, color), true); fb.innerHTML = "";
+  field.querySelectorAll(".b").forEach(el => el.onclick = () => {
+    if (el.dataset.c) return;
+    cur.tapped++; el.dataset.c = cur.tapped;
+    el.insertAdjacentHTML("beforeend", `<i class="tag">${cur.tapped}</i>`);
+    say(String(cur.tapped));
+  });
+  renderOptions($("#count-opts"), fb, n, 1, state.countMax, () => {
+    let k = 0;
+    field.querySelectorAll(".b").forEach(el => { k++; if (!el.dataset.c){ el.dataset.c = k; el.insertAdjacentHTML("beforeend", `<i class="tag">${k}</i>`);} });
+    const w = n === 1 ? "boneco" : "bonecos";
+    fb.innerHTML = `<span class="big">${n}</span> ${w}. Muito bem!`;
+    say(`Muito bem! ${n} ${w}.`);
+    nextButton(fb, newCount);
+  });
+}
+
+/* CONTAS */
+function newMath(){
+  const op = state.op === "mix" ? (Math.random() < .5 ? "+" : "-") : state.op;
+  const M = state.mathMax; let a, b, r;
+  if (op === "+"){ a = rnd(1, M-1); b = rnd(1, M-a); r = a + b; }
+  else { a = rnd(2, M); b = rnd(1, a); r = a - b; }
+  const A = COL.blue, B = COL.pink;
+  const ga = op === "+" ? list(a, A) : [...list(a-b, A), ...list(b, B, "riscado")];
+  const gb = list(b, B, op === "-" ? "riscado" : "");
+  const eq = $("#eq"), fb = $("#math-fb");
+  eq.innerHTML = `
+    <div class="term"><div class="num">${a}</div>${group(ga)}</div>
+    <div class="sign">${op === "+" ? "+" : "−"}</div>
+    <div class="term"><div class="num">${b}</div>${group(gb)}</div>
+    <div class="sign">=</div>
+    <div class="term" id="res"><div class="num q">?</div><div class="grp empty"></div></div>`;
+  fb.innerHTML = "";
+  renderOptions($("#math-opts"), fb, r, 0, M, () => {
+    const items = op === "+" ? [...list(a, A), ...list(b, B)] : list(r, A);
+    $("#res").innerHTML = `<div class="num">${r}</div>` +
+      (r === 0 ? `<span class="zero">não sobra nenhum</span>` : group(items));
+    const w = op === "+" ? "mais" : "menos";
+    fb.innerHTML = `Muito bem! <span class="big">${a} ${op === "+" ? "+" : "−"} ${b} = ${r}</span>`;
+    say(`Muito bem! ${a} ${w} ${b} é igual a ${r}.`);
+    nextButton(fb, newMath);
+  });
+}
+
+/* botões de nível/operação */
+function bindSeg(sel, key, cast, onChange){
+  const box = $(sel);
+  const sync = () => box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(cast(b.dataset.v) === state[key])));
+  box.querySelectorAll("button").forEach(b => b.onclick = () => { state[key] = cast(b.dataset.v); save(); sync(); onChange(); });
+  sync();
+}
+bindSeg("#count-level", "countMax", Number, newCount);
+bindSeg("#math-level", "mathMax", Number, newMath);
+bindSeg("#math-op", "op", String, newMath);
+if (![5,10].includes(state.mathMax)) { state.mathMax = 10; }
+
+/* navegação */
+function go(where){
+  ["menu","count","math"].forEach(s => $("#s-"+s).hidden = s !== where);
+  $("#home").hidden = where === "menu";
+  $("#title").textContent = where === "count" ? "Contar bonecos" : where === "math" ? "Fazer contas" : "Contas com bonecos";
+  if (where === "count") newCount();
+  if (where === "math") newMath();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-go]").forEach(t => t.onclick = () => go(t.dataset.go));
+$("#home").onclick = () => go("menu");
+
+$("#sample-count").innerHTML = [COL.blue, COL.yellow, COL.pink].map((c,i) => `<span class="b">${svgBoneco(c, [0,1,2][i])}</span>`).join("");
+updateStars(); updateSound();
+</script>
+</body>
+</html>
+
+</body></html>

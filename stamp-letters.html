@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Stamp Letters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --surround:#E6ECEE; --surface:#F6F9FA; --ink:#1E2A2E; --muted:#5D6E73; --line:#C9D5D8;
+  --board:#2E4A47; --chalk:#F3F0E6; --chalk-dim:rgba(243,240,230,.18);
+  --yes:#F2C94C; --no:#F28B82; --btn:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --surround:#12191B; --surface:#1A2427; --ink:#E7EEF0; --muted:#93A4A9; --line:#2C3A3E;
+    --board:#213634; --btn:#22302F;
+  }
+}
+:root[data-theme="dark"]{
+  --surround:#12191B; --surface:#1A2427; --ink:#E7EEF0; --muted:#93A4A9; --line:#2C3A3E;
+  --board:#213634; --btn:#22302F;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  height:100%; margin:0; background:var(--surround); color:var(--ink);
+  font-family:"Andika", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  display:flex; flex-direction:column; overflow:hidden;
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--yes); outline-offset:2px}
+
+header{display:flex; align-items:center; gap:10px; padding:10px 14px 6px}
+header h1{font-size:1.15rem; margin:0; font-weight:700; flex:1; letter-spacing:.01em}
+.seg{display:flex; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px}
+.seg button{border:0; background:none; padding:6px 14px; border-radius:999px; color:var(--muted)}
+.seg button.on{background:var(--board); color:var(--chalk)}
+.icon{border:1px solid var(--line); background:var(--surface); width:38px; height:38px; border-radius:50%; font-size:1.1rem; display:grid; place-items:center}
+
+#wordbar{display:flex; align-items:center; gap:8px; padding:4px 14px 10px}
+#word{
+  flex:1; min-width:0; min-height:3.2rem; font-size:2.6rem; line-height:1.2; font-weight:700;
+  white-space:nowrap; overflow-x:auto; overflow-y:hidden; letter-spacing:.06em;
+}
+#word .caret{display:inline-block; width:3px; height:.9em; background:var(--muted); vertical-align:-.08em; margin-left:2px; animation:blink 1.1s steps(1) infinite}
+#word .sp{display:inline-block; width:.5em; border-bottom:2px dotted var(--line)}
+@keyframes blink{50%{opacity:0}}
+.wbtn{border:1px solid var(--line); background:var(--btn); min-width:46px; height:46px; border-radius:12px; font-size:1.15rem; padding:0 10px}
+.wbtn.primary{background:var(--board); color:var(--chalk); border-color:transparent}
+
+main#stage{
+  position:relative; flex:1; min-height:160px; margin:0 6px 6px; border-radius:14px;
+  background:var(--board); overflow:hidden; touch-action:none;
+  box-shadow:inset 0 0 0 6px rgba(0,0,0,.12);
+}
+#cv{position:absolute; inset:0; width:100%; height:100%; display:block}
+#hint{
+  position:absolute; left:0; right:0; bottom:14px; text-align:center; color:var(--chalk);
+  opacity:.65; font-size:.95rem; padding:0 16px; pointer-events:none;
+}
+#toast{
+  position:absolute; left:50%; top:14px; transform:translateX(-50%); max-width:90%;
+  background:var(--chalk); color:#1E2A2E; padding:8px 14px; border-radius:10px; font-size:.95rem;
+  opacity:0; transition:opacity .2s; pointer-events:none; text-align:center;
+}
+#toast.show{opacity:1}
+#exitFocus{position:absolute; top:10px; right:10px; display:none; border:0; background:rgba(0,0,0,.28); color:var(--chalk); border-radius:999px; padding:6px 12px; font-size:.9rem; z-index:2}
+body.focus header{display:none}
+body.focus #teach{display:none}
+body.focus #wordbar{padding:6px 8px 6px}
+body.focus #word{font-size:2rem; min-height:2.5rem}
+body.focus .wbtn{min-width:40px; height:40px}
+body.focus main#stage{margin:0; border-radius:0}
+body.focus #exitFocus{display:block}
+details.letters summary{cursor:pointer; color:var(--muted); font-size:.95rem; padding:2px 0}
+details.letters .list{margin-top:6px}
+
+#teach{
+  margin:0 6px 6px; background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:10px; max-height:34%; overflow-y:auto; display:flex; flex-direction:column; gap:10px;
+}
+#teach[hidden]{display:none}
+.row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.row input[type=text]{
+  border:1px solid var(--line); background:var(--btn); border-radius:10px; padding:9px 10px; min-width:0;
+}
+#tLabel{width:5.5rem; font-size:1.3rem; font-weight:700; text-align:center}
+#tSay{flex:1; min-width:8rem}
+#recStatus{font-size:.95rem; color:var(--muted); min-height:1.3em}
+#recStatus.live{color:var(--ink); font-weight:700}
+.list{display:flex; flex-direction:column; gap:6px}
+.item{display:flex; align-items:center; gap:10px; padding:6px 8px; border:1px solid var(--line); border-radius:10px; background:var(--btn)}
+.item .glyph{font-size:1.6rem; font-weight:700; min-width:2.2rem; text-align:center}
+.item .meta{flex:1; min-width:0; font-size:.85rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.item{cursor:pointer}
+.item button{border:0; background:none; font-size:1.15rem; min-width:40px; min-height:40px}
+.item .edit{font-size:.95rem; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:0 10px}
+.danger{color:#C0392B; border-color:#C0392B !important}
+.danger.armed{background:#C0392B; color:#fff}
+dialog input[type=text]{width:100%; border:1px solid var(--line); background:var(--btn); border-radius:10px; padding:9px 10px}
+#eLabel{font-size:1.4rem; font-weight:700}
+.small{border:1px solid var(--line); background:var(--btn); border-radius:10px; padding:8px 12px}
+.empty{color:var(--muted); font-size:.95rem}
+
+dialog{
+  border:1px solid var(--line); border-radius:16px; background:var(--surface); color:var(--ink);
+  width:min(440px, calc(100vw - 24px)); padding:16px;
+}
+dialog::backdrop{background:rgba(10,20,22,.45)}
+dialog h2{margin:0 0 12px; font-size:1.15rem}
+dialog label{display:block; margin:12px 0 4px; font-size:.95rem}
+dialog select, dialog input[type=range]{width:100%}
+dialog select{border:1px solid var(--line); background:var(--btn); border-radius:10px; padding:8px}
+dialog .check{display:flex; gap:10px; align-items:center; margin-top:12px}
+dialog .note{font-size:.85rem; color:var(--muted); margin:4px 0 0}
+dialog textarea{width:100%; height:180px; border:1px solid var(--line); border-radius:10px; background:var(--btn); padding:8px; font-size:.8rem; -webkit-user-select:text; user-select:text}
+dialog .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:16px}
+
+@media (prefers-reduced-motion: reduce){ #word .caret{animation:none} #toast{transition:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stamp Letters</h1>
+  <div class="seg" role="tablist">
+    <button data-mode="play" class="on">Play</button>
+    <button data-mode="teach">Teach</button>
+  </div>
+  <button class="icon" id="bFocus" aria-label="Bigger board">⛶</button>
+  <button class="icon" id="gear" aria-label="Settings">⚙︎</button>
+</header>
+
+<section id="wordbar">
+  <div id="word" aria-live="polite"></div>
+  <button class="wbtn" id="bBack" aria-label="Delete last letter">⌫</button>
+  <button class="wbtn" id="bSpace" aria-label="Add space">␣</button>
+  <button class="wbtn primary" id="bSay" aria-label="Say word">🔊</button>
+  <button class="wbtn" id="bClear" aria-label="Clear word">✕</button>
+</section>
+
+<main id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hint"></div>
+  <div id="toast"></div>
+  <button id="exitFocus">✕ Exit full board</button>
+</main>
+
+<section id="teach" hidden>
+  <div class="row">
+    <input type="text" id="tLabel" maxlength="4" placeholder="A" aria-label="Letter" autocomplete="off" autocapitalize="characters">
+    <input type="text" id="tSay" placeholder="Spoken as (optional)" aria-label="Spoken as" autocomplete="off">
+    <button class="wbtn primary" id="bRec">Record</button>
+  </div>
+  <div id="recStatus">Type a letter, tap Record, then place the stamp on the board 3 times.</div>
+  <details class="letters" open><summary id="lettersSum">Letters</summary><div class="list" id="list"></div></details>
+  <div class="row">
+    <button class="small" id="bExport">Export</button>
+    <button class="small" id="bImport">Import</button>
+    <button class="small" id="bWipe">Delete all</button>
+  </div>
+</section>
+
+<dialog id="dlgSettings">
+  <h2>Settings</h2>
+  <label for="sVoice">Voice</label>
+  <select id="sVoice"></select>
+  <label for="sRate">Speaking speed <span id="sRateV"></span></label>
+  <input type="range" id="sRate" min="0.5" max="1.4" step="0.05">
+  <label for="sTol">Match tolerance <span id="sTolV"></span></label>
+  <input type="range" id="sTol" min="4" max="40" step="1">
+  <p class="note">Lower is stricter. Raise it if a stamp is often not recognised; lower it if letters get confused.</p>
+  <div class="check"><input type="checkbox" id="sSpeak"><label for="sSpeak" style="margin:0">Say each letter when placed</label></div>
+  <div class="check"><input type="checkbox" id="sMirror"><label for="sMirror" style="margin:0">Tell mirror-image stamps apart</label></div>
+  <div class="actions"><button class="small" id="sClose">Done</button></div>
+</dialog>
+
+<dialog id="dlgEdit">
+  <h2>Edit letter</h2>
+  <label for="eLabel">Letter</label>
+  <input type="text" id="eLabel" maxlength="4" autocomplete="off" autocapitalize="characters">
+  <label for="eSay">Spoken as (optional)</label>
+  <input type="text" id="eSay" autocomplete="off">
+  <p class="note" id="eNote"></p>
+  <div class="actions" style="justify-content:space-between; flex-wrap:wrap">
+    <button class="small danger" id="eDel">Delete</button>
+    <span style="display:flex; gap:8px">
+      <button class="small" id="eRedo">Re-record shape</button>
+      <button class="small" id="eSave">Save</button>
+    </span>
+  </div>
+  <div class="actions" style="margin-top:8px"><button class="small" id="eClose">Cancel</button></div>
+</dialog>
+
+<dialog id="dlgIO">
+  <h2 id="ioTitle">Export</h2>
+  <textarea id="ioText" spellcheck="false"></textarea>
+  <p class="note" id="ioNote"></p>
+  <div class="actions">
+    <button class="small" id="ioCancel">Close</button>
+    <button class="small" id="ioGo">Copy</button>
+  </div>
+</dialog>
+
+<script>
+(function(){
+const KEY = 'stamp-letters-v1';
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), canvas = $('#cv'), ctx = canvas.getContext('2d');
+
+let data = { patterns: [], settings: { tol: 14, rate: 0.9, voiceURI: '', speak: true, mirror: true } };
+try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); data.patterns = d.patterns || []; Object.assign(data.settings, d.settings || {}); } } catch(e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {} }
+
+let mode = 'play', word = '';
+const active = new Map();   // touch pointerId -> {x,y}
+let sim = [];               // mouse-simulated points
+let locked = false, lastSig = null, stableTimer = null;
+let flash = null, rec = null;
+
+/* ---------- geometry ---------- */
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+function signature(p){
+  const sides = [{d:dist(p[1],p[2]),o:0},{d:dist(p[0],p[2]),o:1},{d:dist(p[0],p[1]),o:2}].sort((a,b)=>a.d-b.d);
+  const A=p[sides[0].o], B=p[sides[1].o], C=p[sides[2].o];
+  const cross = (B.x-A.x)*(C.y-A.y)-(B.y-A.y)*(C.x-A.x);
+  const d = sides.map(s=>s.d);
+  const distinct = (d[1]-d[0]) > 0.06*d[2] && (d[2]-d[1]) > 0.06*d[2] && Math.abs(cross) > 0.05*d[2]*d[2];
+  return { d, chir: distinct ? Math.sign(cross) : 0 };
+}
+const err = (a,b) => Math.hypot(a.d[0]-b.d[0], a.d[1]-b.d[1], a.d[2]-b.d[2]);
+function mirrored(a,b){ return data.settings.mirror && a.chir && b.chir && a.chir !== b.chir; }
+function match(s){
+  let best=null, e=Infinity;
+  for (const p of data.patterns){
+    if (mirrored(s, p.sig)) continue;
+    const x = err(s, p.sig);
+    if (x < e){ e = x; best = p; }
+  }
+  return { best, e };
+}
+const centroid = p => ({ x:(p[0].x+p[1].x+p[2].x)/3, y:(p[0].y+p[1].y+p[2].y)/3 });
+
+/* ---------- speech ---------- */
+let voices = [], unlocked = false;
+function loadVoices(){
+  if (!('speechSynthesis' in window)) return;
+  voices = speechSynthesis.getVoices();
+  const sel = $('#sVoice'); sel.innerHTML = '';
+  const def = document.createElement('option'); def.value=''; def.textContent='Device default'; sel.appendChild(def);
+  voices.slice().sort((a,b)=>a.lang.localeCompare(b.lang)).forEach(v=>{
+    const o=document.createElement('option'); o.value=v.voiceURI; o.textContent=`${v.name} (${v.lang})`; sel.appendChild(o);
+  });
+  sel.value = data.settings.voiceURI;
+}
+if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function unlockSpeech(){
+  if (unlocked || !('speechSynthesis' in window)) return;
+  unlocked = true; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u);
+}
+function speak(text){
+  if (!text || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = voices.find(v=>v.voiceURI===data.settings.voiceURI);
+  if (v){ u.voice = v; u.lang = v.lang; }
+  u.rate = data.settings.rate;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- word ---------- */
+function renderWord(){
+  const w = $('#word'); w.innerHTML = '';
+  for (const ch of word){
+    if (ch === ' '){ const s=document.createElement('span'); s.className='sp'; w.appendChild(s); }
+    else w.appendChild(document.createTextNode(ch));
+  }
+  const c=document.createElement('span'); c.className='caret'; w.appendChild(c);
+  w.scrollLeft = w.scrollWidth;
+}
+$('#bBack').onclick = () => { word = [...word].slice(0,-1).join(''); renderWord(); };
+$('#bSpace').onclick = () => { if (word && !word.endsWith(' ')) { word += ' '; renderWord(); } };
+$('#bSay').onclick = () => { unlockSpeech(); speak(word.trim().toLowerCase()); };
+$('#bClear').onclick = () => { word=''; renderWord(); };
+
+/* ---------- toast & hint ---------- */
+let toastT;
+function toast(msg, ms=2200){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), ms); }
+function updateHint(){
+  const h = $('#hint');
+  if (mode==='teach') h.textContent = rec ? 'Place the stamp on the board' : 'Place a stamp here to test it';
+  else if (!data.patterns.length) h.textContent = 'No letters yet — open Teach to record your first stamp';
+  else h.textContent = 'Place a stamp on the board';
+}
+
+/* ---------- placement ---------- */
+function fire(points){
+  locked = true;
+  const s = signature(points), c = centroid(points);
+  if (mode==='teach' && rec){ addSample(s, c); return; }
+  const m = match(s);
+  if (m.best && m.e <= data.settings.tol){
+    flash = { text:m.best.label, x:c.x, y:c.y, t:performance.now(), ok:true };
+    if (mode==='play'){ word += m.best.label; renderWord(); }
+    if (data.settings.speak || mode==='teach') speak(m.best.say || m.best.label);
+    if (navigator.vibrate) navigator.vibrate(25);
+  } else {
+    flash = { text:'?', x:c.x, y:c.y, t:performance.now(), ok:false };
+    toast(m.best ? `Not recognised — closest is ${m.best.label} (off by ${m.e.toFixed(0)}, limit ${data.settings.tol})` : 'Not recognised — no letters recorded yet');
+  }
+}
+let twoTimer = null, twoWarned = false;
+function settle(){
+  // diagnostic: two tips held still usually means two of the three are merging into one touch
+  if (active.size === 2 && !locked){
+    if (!twoTimer && !twoWarned) twoTimer = setTimeout(()=>{
+      twoTimer = null;
+      if (active.size === 2 && !locked){
+        twoWarned = true;
+        const [a,b] = [...active.values()];
+        toast(`Only 2 tips detected (${Math.round(dist(a,b))} px apart). Two tips are probably too close — the screen sees them as one.`, 4500);
+      }
+    }, 700);
+  } else { clearTimeout(twoTimer); twoTimer = null; }
+  if (active.size === 0) twoWarned = false;
+  if (active.size !== 3 || locked){ lastSig = null; clearTimeout(stableTimer); return; }
+  const s = signature([...active.values()]);
+  if (!lastSig || err(s, lastSig) > 4){
+    lastSig = s; clearTimeout(stableTimer);
+    stableTimer = setTimeout(()=>{ if (active.size===3 && !locked) fire([...active.values()]); }, 150);
+  }
+}
+function rel(e){ const r = canvas.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+
+stage.addEventListener('pointerdown', e => {
+  unlockSpeech(); e.preventDefault();
+  if (e.pointerType === 'mouse'){
+    if (locked) return;
+    sim.push(rel(e));
+    if (sim.length === 3){ fire(sim.slice()); setTimeout(()=>{ sim=[]; locked=false; }, 700); }
+    return;
+  }
+  active.set(e.pointerId, rel(e)); settle();
+});
+stage.addEventListener('pointermove', e => { if (active.has(e.pointerId)){ active.set(e.pointerId, rel(e)); settle(); } });
+function up(e){ if (active.delete(e.pointerId)){ if (active.size===0) locked=false; settle(); } }
+['pointerup','pointercancel'].forEach(t => stage.addEventListener(t, up));
+['gesturestart','gesturechange','contextmenu'].forEach(t => stage.addEventListener(t, e=>e.preventDefault()));
+document.addEventListener('touchmove', e => { if (stage.contains(e.target)) e.preventDefault(); }, { passive:false });
+
+/* ---------- teach ---------- */
+function startRec(replaceId){
+  const label = $('#tLabel').value.trim();
+  if (!label){ toast('Type the letter first'); $('#tLabel').focus(); return; }
+  rec = { label, say: $('#tSay').value.trim(), samples: [], replaceId: replaceId || null };
+  $('#bRec').textContent = 'Cancel';
+  setStatus(`Place the stamp for “${label}” — 1 of 3`, true);
+  updateHint();
+}
+function stopRec(msg){
+  rec = null; $('#bRec').textContent = 'Record';
+  setStatus(msg || 'Type a letter, tap Record, then place the stamp on the board 3 times.', false);
+  updateHint();
+}
+function setStatus(t, live){ const s=$('#recStatus'); s.textContent=t; s.classList.toggle('live', !!live); }
+function addSample(s, c){
+  rec.samples.push(s);
+  flash = { text: String(rec.samples.length), x:c.x, y:c.y, t:performance.now(), ok:true };
+  if (navigator.vibrate) navigator.vibrate(20);
+  if (rec.samples.length < 3){ setStatus(`Lift and place it again — ${rec.samples.length+1} of 3`, true); return; }
+  const n = rec.samples.length;
+  const avg = { d:[0,1,2].map(i => rec.samples.reduce((a,x)=>a+x.d[i],0)/n) };
+  const cs = rec.samples.reduce((a,x)=>a+x.chir,0);
+  avg.chir = Math.abs(cs) >= 2 ? Math.sign(cs) : 0;
+  const spread = Math.max(...rec.samples.map(x=>err(x,avg)));
+  const label = rec.label, say = rec.say;
+  const rid = rec.replaceId;
+  data.patterns = data.patterns.filter(p => p.label !== label && p.id !== rid);
+  data.patterns.push({ id: Date.now().toString(36), label, say, sig: avg });
+  data.patterns.sort((a,b)=>a.label.localeCompare(b.label));
+  save(); renderList();
+  const clash = data.patterns.filter(p => p.label!==label && !mirrored(avg,p.sig) && err(avg,p.sig) < data.settings.tol*1.5);
+  let msg = `Saved “${label}”.`;
+  if (spread > data.settings.tol*0.6) msg += ' The 3 placements varied a lot — re-record if it misreads.';
+  if (clash.length) msg += ` Very close to ${clash.map(p=>p.label).join(', ')} — they may get confused.`;
+  stopRec(msg);
+  speak(say || label);
+  $('#tLabel').value=''; $('#tSay').value='';
+}
+$('#bRec').onclick = () => { unlockSpeech(); rec ? stopRec() : startRec(); };
+$('#tLabel').addEventListener('keydown', e => { if (e.key==='Enter') startRec(); });
+
+function armButton(btn, label, armedLabel, action){
+  // two-tap confirm (browser confirm() popups are blocked inside published pages)
+  btn.textContent = label; btn.classList.remove('armed'); clearTimeout(btn._t);
+  btn.onclick = () => {
+    if (btn.classList.contains('armed')){ clearTimeout(btn._t); btn.classList.remove('armed'); btn.textContent = label; action(); return; }
+    btn.classList.add('armed'); btn.textContent = armedLabel;
+    btn._t = setTimeout(()=>{ btn.classList.remove('armed'); btn.textContent = label; }, 3000);
+  };
+}
+let editing = null;
+function openEdit(p){
+  editing = p;
+  $('#eLabel').value = p.label; $('#eSay').value = p.say || ''; $('#eNote').textContent = '';
+  armButton($('#eDel'), 'Delete', 'Tap again to delete', () => {
+    data.patterns = data.patterns.filter(x => x.id !== editing.id);
+    save(); renderList(); $('#dlgEdit').close(); toast(`Deleted “${editing.label}”`);
+  });
+  $('#dlgEdit').showModal();
+}
+function editValues(){
+  const label = $('#eLabel').value.trim(), say = $('#eSay').value.trim();
+  if (!label){ $('#eNote').textContent = 'The letter can’t be empty.'; return null; }
+  if (data.patterns.some(x => x.label === label && x.id !== editing.id)){ $('#eNote').textContent = `“${label}” already exists. Delete that one first or pick another name.`; return null; }
+  return { label, say };
+}
+$('#eSave').onclick = () => {
+  const v = editValues(); if (!v) return;
+  editing.label = v.label; editing.say = v.say;
+  data.patterns.sort((a,b)=>a.label.localeCompare(b.label));
+  save(); renderList(); $('#dlgEdit').close(); toast(`Saved “${v.label}”`);
+};
+$('#eRedo').onclick = () => {
+  const v = editValues(); if (!v) return;
+  $('#dlgEdit').close();
+  if (rec) stopRec();
+  $('#tLabel').value = v.label; $('#tSay').value = v.say;
+  startRec(editing.id);
+};
+$('#eClose').onclick = () => $('#dlgEdit').close();
+
+function renderList(){
+  const L = $('#list'); L.innerHTML = ''; $('#lettersSum').textContent = `Letters (${data.patterns.length})`;
+  if (!data.patterns.length){ L.innerHTML = '<div class="empty">No letters recorded yet.</div>'; updateHint(); return; }
+  for (const p of data.patterns){
+    const el = document.createElement('div'); el.className='item';
+    const g = document.createElement('div'); g.className='glyph'; g.textContent=p.label;
+    const m = document.createElement('div'); m.className='meta';
+    m.textContent = `${p.say ? '“'+p.say+'”, ' : ''}sides ${p.sig.d.map(x=>Math.round(x)).join(' / ')}${p.sig.chir ? (p.sig.chir>0?' ↻':' ↺') : ''}`;
+    const hear = document.createElement('button'); hear.textContent='🔊'; hear.setAttribute('aria-label','Hear '+p.label);
+    hear.onclick = ev => { ev.stopPropagation(); unlockSpeech(); speak(p.say||p.label); };
+    const edit = document.createElement('button'); edit.className='edit'; edit.textContent='Edit';
+    edit.onclick = ev => { ev.stopPropagation(); openEdit(p); };
+    el.onclick = () => openEdit(p);
+    el.append(g,m,hear,edit); L.appendChild(el);
+  }
+  updateHint();
+}
+
+/* ---------- import / export ---------- */
+let ioMode='export';
+$('#bExport').onclick = () => {
+  ioMode='export'; $('#ioTitle').textContent='Export letters'; $('#ioGo').textContent='Copy';
+  $('#ioText').value = JSON.stringify({ patterns:data.patterns }, null, 1);
+  $('#ioNote').textContent = 'Copy this to keep a backup. Patterns are measured in screen pixels, so they work best on the same device.';
+  $('#dlgIO').showModal();
+};
+$('#bImport').onclick = () => {
+  ioMode='import'; $('#ioTitle').textContent='Import letters'; $('#ioGo').textContent='Import';
+  $('#ioText').value=''; $('#ioNote').textContent='Paste exported letters. Letters with the same name are replaced.';
+  $('#dlgIO').showModal();
+};
+$('#ioCancel').onclick = () => $('#dlgIO').close();
+$('#ioGo').onclick = async () => {
+  if (ioMode==='export'){
+    try { await navigator.clipboard.writeText($('#ioText').value); $('#ioNote').textContent='Copied.'; }
+    catch(e){ $('#ioText').select(); $('#ioNote').textContent='Select all and copy manually.'; }
+    return;
+  }
+  try {
+    const d = JSON.parse($('#ioText').value);
+    const incoming = (d.patterns||[]).filter(p => p && p.label && p.sig && Array.isArray(p.sig.d) && p.sig.d.length===3);
+    if (!incoming.length) throw 0;
+    const names = new Set(incoming.map(p=>p.label));
+    data.patterns = data.patterns.filter(p=>!names.has(p.label)).concat(incoming).sort((a,b)=>a.label.localeCompare(b.label));
+    save(); renderList(); $('#dlgIO').close(); toast(`Imported ${incoming.length} letter${incoming.length>1?'s':''}`);
+  } catch(e){ $('#ioNote').textContent='That text is not a valid letters export.'; }
+};
+$('#bWipe').classList.add('danger');
+armButton($('#bWipe'), 'Delete all', 'Tap again to delete all', () => { data.patterns=[]; save(); renderList(); if (rec) stopRec(); toast('All letters deleted'); });
+
+/* ---------- mode & settings ---------- */
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on', x===b));
+  $('#teach').hidden = mode!=='teach';
+  if (mode!=='teach' && rec) stopRec();
+  updateHint(); resize();
+});
+const S = data.settings;
+function syncSettings(){
+  $('#sRate').value=S.rate; $('#sRateV').textContent=`(${(+S.rate).toFixed(2)}×)`;
+  $('#sTol').value=S.tol; $('#sTolV').textContent=`(${S.tol})`;
+  $('#sSpeak').checked=S.speak; $('#sMirror').checked=S.mirror; $('#sVoice').value=S.voiceURI;
+}
+$('#gear').onclick = () => { syncSettings(); $('#dlgSettings').showModal(); };
+$('#sClose').onclick = () => $('#dlgSettings').close();
+$('#sRate').oninput = e => { S.rate=+e.target.value; syncSettings(); save(); };
+$('#sTol').oninput = e => { S.tol=+e.target.value; syncSettings(); save(); };
+$('#sSpeak').onchange = e => { S.speak=e.target.checked; save(); };
+$('#sMirror').onchange = e => { S.mirror=e.target.checked; save(); };
+$('#sVoice').onchange = e => { S.voiceURI=e.target.value; save(); unlockSpeech(); speak('A B C'); };
+
+/* ---------- drawing ---------- */
+let W=0,H=0;
+function resize(){
+  const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio||1;
+  W=r.width; H=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+if ('ResizeObserver' in window) new ResizeObserver(()=>resize()).observe(stage);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function draw(now){
+  const cs = getComputedStyle(document.documentElement);
+  const chalk = cs.getPropertyValue('--chalk').trim(), dim = cs.getPropertyValue('--chalk-dim').trim();
+  const yes = cs.getPropertyValue('--yes').trim(), no = cs.getPropertyValue('--no').trim();
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = dim;
+  for (let x=24; x<W; x+=32) for (let y=24; y<H; y+=32){ ctx.beginPath(); ctx.arc(x,y,1.2,0,7); ctx.fill(); }
+
+  const pts = active.size ? [...active.values()] : sim;
+  if (pts.length >= 2){
+    ctx.strokeStyle = chalk; ctx.lineWidth = 2; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    if (pts.length===3) ctx.closePath();
+    ctx.stroke(); ctx.setLineDash([]);
+    if (pts.length===3){
+      ctx.fillStyle = chalk; ctx.font = '13px Andika, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      for (let i=0;i<3;i++){ const a=pts[i], b=pts[(i+1)%3]; ctx.fillText(Math.round(dist(a,b)), (a.x+b.x)/2, (a.y+b.y)/2 - 12); }
+    }
+  }
+  if (active.size){
+    ctx.fillStyle = active.size===3 ? chalk : no; ctx.font = '600 15px Andika, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(`${active.size} of 3 tips detected`, 14, 14);
+  }
+  for (const p of pts){
+    ctx.fillStyle = dim; ctx.beginPath(); ctx.arc(p.x,p.y,26,0,7); ctx.fill();
+    ctx.strokeStyle = chalk; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x,p.y,18,0,7); ctx.stroke();
+  }
+  if (flash){
+    const t = (now - flash.t)/1100;
+    if (t >= 1) flash = null;
+    else {
+      const a = 1 - t*t, sc = reduce ? 1 : 0.85 + 0.25*Math.min(1, t*4);
+      ctx.save(); ctx.globalAlpha = a; ctx.translate(flash.x, flash.y); ctx.scale(sc, sc);
+      ctx.fillStyle = flash.ok ? yes : no; ctx.font = '700 110px Andika, sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(flash.text, 0, 0);
+      ctx.restore();
+    }
+  }
+  requestAnimationFrame(draw);
+}
+
+function setFocus(on){
+  document.body.classList.toggle('focus', on);
+  if (on && mode==='teach' && !rec) document.querySelector('.seg button[data-mode=play]').click();
+  try { localStorage.setItem(KEY+'-focus', on?'1':''); } catch(e){}
+  requestAnimationFrame(resize);
+}
+$('#bFocus').onclick = () => setFocus(true);
+$('#exitFocus').addEventListener('pointerdown', e => e.stopPropagation());
+$('#exitFocus').onclick = e => { e.stopPropagation(); setFocus(false); };
+let startFocus=false; try { startFocus = localStorage.getItem(KEY+'-focus')==='1'; } catch(e){}
+renderWord(); renderList(); updateHint(); resize(); if (startFocus) setFocus(true); requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caixa de Apps</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sniglet:wght@400;800&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: cabeçalho curto + filtros por tema + grelha de cartões grandes, fáceis de tocar */
+:root{
+  --bg:#E4EEF6; --card:#FFFFFF; --ink:#1D2A3A; --muted:#566579; --line:#CBDAE7;
+  --leitura:#2F80ED; --escrita:#8B5CF6; --matematica:#F2994A; --memoria:#27AE60; --festa:#E8590C;
+  --display:"Sniglet","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131C27; --card:#1D2836; --ink:#EAF0F6; --muted:#9DAABB; --line:#2C3A4B;
+  --leitura:#6EA8FF; --escrita:#B49BFF; --matematica:#FFB36B; --memoria:#4FD08A; --festa:#FF8A4C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131C27; --card:#1D2836; --ink:#EAF0F6; --muted:#9DAABB; --line:#2C3A4B;
+  --leitura:#6EA8FF; --escrita:#B49BFF; --matematica:#FFB36B; --memoria:#4FD08A; --festa:#FF8A4C; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(2.1rem,8vw,3rem);margin:0;line-height:1.05;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);font-size:1.05rem;max-width:52ch}
+.filtros{display:flex;gap:8px;flex-wrap:wrap}
+.filtros button{font:800 .95rem var(--body);color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.filtros button i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--muted))}
+.filtros button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.grelha{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.app{display:flex;gap:14px;align-items:center;text-decoration:none;color:inherit;background:var(--card);border:2px solid var(--line);
+  border-radius:20px;padding:14px;min-width:0;box-shadow:0 4px 0 var(--line);transition:transform .1s,box-shadow .1s}
+.app:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--line)}
+.app:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.app:focus-visible{outline:3px solid var(--c);outline-offset:3px}
+.ico{flex:none;width:68px;height:68px;border-radius:18px;display:grid;place-items:center;font-size:2.2rem;
+  background:color-mix(in srgb,var(--c) 18%,var(--card));border:2px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.txt{min-width:0;display:flex;flex-direction:column;gap:3px}
+.txt b{font-family:var(--display);font-weight:800;font-size:1.3rem;line-height:1.15}
+.txt span{color:var(--muted);font-size:.95rem;line-height:1.35}
+.tag{align-self:flex-start;margin-top:2px;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.vazio{color:var(--muted)}
+footer{color:var(--muted);font-size:.85rem;text-align:center;margin-top:8px}
+@media (prefers-reduced-motion:reduce){.app{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Caixa de Apps</h1>
+    <p>Jogos para aprender a ler, escrever e contar, e mais umas surpresas. Toca numa app para começar.</p>
+  </header>
+  <nav class="filtros" id="filtros" aria-label="Filtrar por tema"></nav>
+  <main class="grelha" id="grelha"></main>
+  <footer id="rodape"></footer>
+</div>
+
+<script>
+/* Para acrescentar uma app: junta uma linha a esta lista (o ficheiro fica na mesma pasta). */
+const TEMAS = {
+  leitura:   { nome:"Ler",       cor:"--leitura" },
+  escrita:   { nome:"Escrever",  cor:"--escrita" },
+  matematica:{ nome:"Contar",    cor:"--matematica" },
+  memoria:   { nome:"Pensar",    cor:"--memoria" },
+  festa:     { nome:"Festas",    cor:"--festa" }
+};
+const APPS = [
+  { ficheiro:"ler-com-o-tico.html",     nome:"Ler com o Tico",        icone:"🐦", tema:"leitura",    texto:"Ordena frases e escolhe a figura certa." },
+  { ficheiro:"silabas-magicas.html",    nome:"Sílabas Mágicas",       icone:"🧩", tema:"leitura",    texto:"Junta as sílabas para formar palavras." },
+  { ficheiro:"stamp-letters.html",      nome:"Stamp Letters",         icone:"🔤", tema:"leitura",    texto:"Carimba letras no ecrã e forma palavras." },
+  { ficheiro:"letrinhas-magicas.html",  nome:"Letrinhas Mágicas",     icone:"✏️", tema:"escrita",    texto:"Desenha letras e números seguindo as setas." },
+  { ficheiro:"letrinhas-escrever.html", nome:"Letrinhas",             icone:"📒", tema:"escrita",    texto:"Aprende a letra manuscrita, quatro vezes cada." },
+  { ficheiro:"contas-com-bonecos.html", nome:"Contas com bonecos",    icone:"➕", tema:"matematica", texto:"Conta bonecos e faz somas e subtrações." },
+  { ficheiro:"onde-esta-o-gato.html",   nome:"Onde Está o Gato?",     icone:"🐱", tema:"memoria",    texto:"Em cima, debaixo, dentro, à esquerda…" },
+  { ficheiro:"jogo-da-memoria.html",    nome:"Jogo da Memória",       icone:"🧠", tema:"memoria",    texto:"Lembra-te de números e figuras pela ordem." },
+  { ficheiro:"porta-assombrada.html",   nome:"Porta Assombrada",      icone:"🎃", tema:"festa",      texto:"Range quando a porta abre. Para o Halloween." }
+];
+
+let filtro = "todas";
+const $ = id => document.getElementById(id);
+
+function desenharFiltros(){
+  const usados = [...new Set(APPS.map(a => a.tema))];
+  const botoes = [["todas","Todas",null], ...usados.map(t => [t, TEMAS[t].nome, TEMAS[t].cor])];
+  $("filtros").innerHTML = botoes.map(([id,nome,cor]) =>
+    `<button type="button" data-f="${id}" aria-pressed="${id===filtro}" ${cor?`style="--c:var(${cor})"`:""}>${cor?"<i></i>":""}${nome}</button>`).join("");
+}
+function desenharApps(){
+  const lista = APPS.filter(a => filtro === "todas" || a.tema === filtro);
+  $("grelha").innerHTML = lista.length ? lista.map(a => {
+    const t = TEMAS[a.tema];
+    return `<a class="app" href="${a.ficheiro}" style="--c:var(${t.cor})">
+      <span class="ico" aria-hidden="true">${a.icone}</span>
+      <span class="txt"><b>${a.nome}</b><span>${a.texto}</span><span class="tag">${t.nome}</span></span>
+    </a>`;
+  }).join("") : `<p class="vazio">Ainda não há apps neste tema.</p>`;
+  $("rodape").textContent = `${APPS.length} apps`;
+}
+$("filtros").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if (!b) return;
+  filtro = b.dataset.f;
+  try { localStorage.setItem("caixa-filtro", filtro); } catch(_) {}
+  desenharFiltros(); desenharApps();
+});
+try { const f = localStorage.getItem("caixa-filtro"); if (f && (f === "todas" || APPS.some(a => a.tema === f))) filtro = f; } catch(_) {}
+desenharFiltros(); desenharApps();
+</script>
+</body>
+</html>
